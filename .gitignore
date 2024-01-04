@@ -1,0 +1,4 @@
+*.inc
+test/ch2inc
+test/h2inc
+*.exe

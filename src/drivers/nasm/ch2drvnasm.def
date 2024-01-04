@@ -1,0 +1,3 @@
+LIBRARY ch2drvnasm
+EXPORTS
+	CH2DriverEntrypoint

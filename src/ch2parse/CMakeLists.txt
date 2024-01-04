@@ -1,0 +1,5 @@
+file(GLOB SRC "*.cpp" "*.hpp")
+add_library(ch2parse STATIC ${SRC})
+target_link_directories(ch2parse PUBLIC "${LLVM_ROOT}/lib")
+target_include_directories(ch2parse PUBLIC "${LLVM_ROOT}/include;${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(ch2parse PUBLIC clang ch2drv)
