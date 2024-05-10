@@ -10,4 +10,10 @@ endif()
 find_package(cxxopts CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 
+set(LIBCLANG_NAME "clang")
+
+if (WIN32 AND EXISTS "${LLVM_ROOT}/lib/libclang.lib")
+    set(LIBCLANG_NAME "libclang")
+endif()
+
 add_subdirectory(src)
