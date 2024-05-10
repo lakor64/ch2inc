@@ -1,5 +1,7 @@
 @echo off
 
+mkdir ch2inc 2>NUL
+
 set ch2inc_path=..\x64\Debug\
 
 for %%i in (.\*.h) do (

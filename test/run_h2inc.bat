@@ -1,5 +1,7 @@
 @echo off
 
+mkdir h2inc 2>NUL
+
 for %%i in (.\*.h) do (
     call :h2incfnc %%i
 )
