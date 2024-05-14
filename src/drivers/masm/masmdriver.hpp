@@ -19,6 +19,7 @@ public:
 		, m_total_preprocess_typedef(0)
 		, m_total_used_typedef(0)
 		, m_total_protos(0)
+		, m_data_written(false)
 	{}
 
 	/**
@@ -112,7 +113,7 @@ public:
 	* Writes a global variable
 	* @param def Variable type
 	*/
-	void WriteGlobalVar(const Typedef& def) override;
+	void WriteGlobalVar(const GlobalVar& def) override;
 
 private:
 	/**
@@ -129,10 +130,19 @@ private:
 	*/
 	void WriteStructMembers(const Struct& stru);
 
+	/**
+	* Writes a single type
+	* @param link Type link
+	* @param field_name Type name
+	*/
+	void WriteType(const LinkType& link, const std::string_view& field_name);
+
 	/** total preprocessed custom typedefs */
 	int64_t m_total_preprocess_typedef;
 	/** total used custom typedefs */
 	int64_t m_total_used_typedef;
 	/** total function protos */
 	int64_t m_total_protos;
+	/** written the .DATA command */
+	bool m_data_written;
 };

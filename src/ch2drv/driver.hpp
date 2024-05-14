@@ -126,7 +126,7 @@ public:
 	* Writes a global variable
 	* @param def Variable type
 	*/
-	virtual void WriteGlobalVar(const Typedef& def) = 0;
+	virtual void WriteGlobalVar(const GlobalVar& def) = 0;
 
 protected:
 	/**

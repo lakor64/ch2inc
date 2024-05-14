@@ -43,6 +43,29 @@ static void copy_fixed_name(std::string& dst, const LinkType& link)
 	}
 }
 
+void MasmDriver::WriteType(const LinkType& ref, const std::string_view& field_name)
+{
+	std::string typeName = "";
+	bool usetags = false;
+
+	if (ref.pointers)
+	{
+		typeName = "@t_" + std::to_string(m_total_used_typedef);
+	}
+	else
+	{
+		copy_fixed_name(typeName, ref);
+
+		if (ref.ref_type->GetTypeID() == MemberType::Struct || ref.ref_type->GetTypeID() == MemberType::Union)
+		{
+			usetags = true;
+		}
+	}
+
+	writefmt(m_fp, "{}\t\t{}\t\t{}\n", field_name, typeName, usetags ? "<>" : "?");
+
+}
+
 void MasmDriver::WriteStructMembers(const Struct& stru)
 {
 	int64_t totalprct = 0;
@@ -54,24 +77,7 @@ void MasmDriver::WriteStructMembers(const Struct& stru)
 
 		if (field->GetSize() == -1) // bitsize > 0 works differently
 		{
-			std::string typeName = "";
-			bool usetags = false;
-
-			if (field->GetRef().pointers)
-			{
-				typeName = "@t_" + std::to_string(m_total_used_typedef);
-			}
-			else
-			{
-				copy_fixed_name(typeName, field->GetRef());
-
-				if (field->GetRef().ref_type->GetTypeID() == MemberType::Struct || field->GetRef().ref_type->GetTypeID() == MemberType::Union)
-				{
-					usetags = true;
-				}
-			}
-
-			writefmt(m_fp, "{}\t\t{}\t\t{}\n", field->GetName(), typeName, usetags ? "<>" : "?");
+			WriteType(field->GetRef(), field->GetName());
 		}
 		else
 		{
@@ -286,9 +292,27 @@ void MasmDriver::WriteDefine(const Define& def)
 	// TODO
 }
 
-void MasmDriver::WriteGlobalVar(const Typedef& def)
+void MasmDriver::WriteGlobalVar(const GlobalVar& def)
 {
-	// TODO!
+	if (def.GetStorageType() == StorageType::Static)
+	{
+		if (!m_data_written)
+		{
+			// writes .DATA if we find static variables
+			writefmt(m_fp, "\n.DATA\n\n");
+			m_data_written = true;
+		}
+
+		WriteType(def.GetRef(), def.GetName());
+	}
+	else
+	{
+		// EXTERNDEF
+
+		std::string name = "";
+		copy_fixed_name(name, def.GetRef());
+		writefmt(m_fp, "EXTERNDEF\t\tC\t{}:{}\n", def.GetName(), name);
+	}
 }
 
 void MasmDriver::AppendExtraDefines(std::vector<std::string>& defs)
