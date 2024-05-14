@@ -260,7 +260,7 @@ void CH2Inc::AddDefaultData()
 		m_sopts.extra.push_back("-fms-compatibility");
 		m_sopts.extra.push_back("-fms-extensions");
 		m_sopts.extra.push_back("-mlong-double-64"); // make "long double" real8 and not real10
-
+		 
 		if (m_sopts.info.GetBits() == 32) // 16bit does not default to __stdcall and neither 64-bit does
 		{
 			m_sopts.extra.push_back("-mrtd"); // make __stdcall the default

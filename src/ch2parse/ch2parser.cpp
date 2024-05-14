@@ -295,11 +295,18 @@ BasicMember* CH2Parser::VisitEnum(CXCursor c)
 BasicMember* CH2Parser::VisitFunc(CXCursor c)
 {
 	ClangStr name(clang_getCursorSpelling(c));
-	auto type = clang_getCursorType(c);
+	const auto type = clang_getCursorType(c);
 	auto rt = new Function();
 	
+	const auto argLen = clang_Cursor_getNumArguments(c);
+
 	rt->m_name = name.Get();
-	rt->m_variadic = clang_isFunctionTypeVariadic(type) > 0;
+
+	/* 
+	* ISO C forbids "void a(...)", and MS H2INC doesn't threat "void a()" as variadic.
+	* I don't think we should do this as well, so make sure a function can be variadic if libClang tells us so and we have at least one argument
+	*/
+	rt->m_variadic = clang_isFunctionTypeVariadic(type) > 0 && argLen > 0;
 	rt->m_calltype = Utility::CXCallConvToCH2CallConv(clang_getFunctionTypeCallingConv(type));
 	if (rt->m_calltype == CallType::Invalid)
 	{
@@ -308,7 +315,7 @@ BasicMember* CH2Parser::VisitFunc(CXCursor c)
 		return nullptr;
 	}
 
-	auto returnType = clang_getResultType(type);
+	const auto returnType = clang_getResultType(type);
 	
 	if (returnType.kind != CXType_Void)
 	{
@@ -320,13 +327,11 @@ BasicMember* CH2Parser::VisitFunc(CXCursor c)
 		}
 	}
 
-	auto argLen = clang_Cursor_getNumArguments(c);
-
 	for (int i = 0; i < argLen; i++)
 	{
 		FuncData d;
-		auto argCursor = clang_Cursor_getArgument(c, i);
-		auto argumentType = clang_getCursorType(argCursor);
+		const auto argCursor = clang_Cursor_getArgument(c, i);
+		const auto argumentType = clang_getCursorType(argCursor);
 
 		if (!SetupLink(argumentType, d.ref))
 		{
@@ -358,7 +363,7 @@ BasicMember* CH2Parser::VisitMacroDef(CXCursor c)
 
 CXChildVisitResult CH2Parser::ParseChild(CXCursor cursor, CXCursor parent)
 {
-	auto kind = clang_getCursorKind(cursor);
+	const auto kind = clang_getCursorKind(cursor);
 	BasicMember* member = nullptr;
 	bool skip = false, skipadd = false;
 
