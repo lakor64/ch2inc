@@ -281,7 +281,8 @@ BasicMember* CH2Parser::VisitEnumDecl(CXCursor c, CXCursor p)
 BasicMember* CH2Parser::VisitEnum(CXCursor c)
 {
 	auto rt = new Enum();
-	ClangStr name(clang_getCursorSpelling(c));
+	auto type = clang_getCursorType(c);
+	ClangStr name(clang_getTypeSpelling(type));
 
 	rt->m_name = name.Get();
 

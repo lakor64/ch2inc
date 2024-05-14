@@ -236,7 +236,10 @@ void MasmDriver::WriteUnion(const Union& fnc)
 
 void MasmDriver::WriteEnum(const Enum& fnc)
 {
-	// TODO
+	for (const auto& p : fnc.GetFields())
+	{
+		writefmt(m_fp, "%s\t\tEQU\t\t%llut\n", p->GetName().c_str(), p->GetValue());
+	}
 }
 
 void MasmDriver::WriteFunction(const Function& fnc)
