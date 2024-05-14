@@ -9,11 +9,22 @@
 #include <format>
 #include <string_view>
 
+/**
+* Writes a string to a C file
+* @param fp C file pointer
+* @param fmt String to write
+*/
 static void writefmt(FILE* fp, const std::string_view& fmt)
 {
 	fwrite(fmt.data(), fmt.size(), 1, fp);
 }
 
+/**
+* Writes a formatted string to a C file
+* @param fp C file pointer
+* @param fmt String to format
+* @param args Arguments to format
+*/
 template <typename... Args>
 static void writefmt(FILE* fp, const std::string_view& fmt, Args&&... args)
 {

@@ -39,6 +39,10 @@ public:
 	*/
 	void Visit(const std::string& in, int clang_argc, const char** clang_argv, CFile& file, const PlatformInfo& plat);
 
+	/**
+	* Gets the last error of the parser
+	* @return last error
+	*/
 	constexpr auto GetLastError() { return m_lasterr; }
 
 	/**
@@ -108,13 +112,48 @@ private:
 	*/
 	BasicMember* VisitFunc(CXCursor c);
 
+	/**
+	* Sets up a Link reference class
+	* @param type Type to setup
+	* @param ref Output link type
+	*/
 	bool SetupLink(CXType type, LinkType& ref);
 
+	/**
+	* Finds a referenced member in the parsed types
+	* @param name Type name
+	* @return Reference to a member or NULL in case of error
+	*/
 	BasicMember* FindType(const std::string& name);
+
+	/**
+	* Finds a referenced member in the parsed types
+	* @param name Clang type
+	* @return Reference to a member or NULL in case of error
+	*/
 	BasicMember* FindType(CXType type);
+
+	/**
+	* Gets the type referenced by the clang cursor and find it's referenced member in the parsed types
+	* @param type Clang cursor
+	* @return Reference to a member or NULL in case of error
+	*/
 	BasicMember* FindType(CXCursor type);
 
+	/**
+	* Adds a primitive type to the parser
+	* @param name Primitive name
+	* @param type Primitive type
+	* @param mod Primitive modificator
+	*/
 	void AddPrimitive(const std::string& name, PrimitiveType type, PrimitiveMods mod);
+
+	/**
+	* Adds basic platform types to the parser reference, this is done so we can use
+	* correct sizes of types per platform
+	* example: sizeof(int) in 16-bit is 2 bytes
+	* @param plat Platform configuration
+	*/
 	void AddBasics(const PlatformInfo& plat);
 
 	/**
@@ -127,6 +166,8 @@ private:
 	*/
 	CFile* m_cf;
 
-	/** key-value reference of all the types */
+	/**
+	* key-value reference of all the types
+	*/
 	std::unordered_map<std::string, BasicMember*> m_types;
 };

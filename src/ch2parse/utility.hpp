@@ -16,6 +16,12 @@
 
 namespace Utility
 {
+	/**
+	* Gets the primitive type for the specified platform
+	* @param name Name of the type
+	* @param platform Platform configuration
+	* @return fetched primitive type
+	*/
 	PrimitiveType GetPrimitiveTypeForPlatform(const std::string& name, const PlatformInfo& platform);
 
 	/**
@@ -25,5 +31,10 @@ namespace Utility
 	*/
 	CH2ErrorCodes CXErrorToCH2Error(CXErrorCode ec);
 
+	/**
+	* Converts a clang calling conversion to a library calling convention
+	* @param c Calling convention to translate
+	* @return library calling convention
+	*/
 	CallType CXCallConvToCH2CallConv(CXCallingConv c);
 }

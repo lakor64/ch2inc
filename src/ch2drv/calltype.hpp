@@ -25,4 +25,9 @@ enum class CallType
 	Pascal,
 };
 
+/**
+* Converts the library calltype to it's name rapresentation
+* @param ct Calltype to convert
+* @return string rapresentation of the calltype
+*/
 const char* CallType2Str(CallType ct);

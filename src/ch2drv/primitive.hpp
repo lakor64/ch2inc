@@ -57,9 +57,21 @@ class Primitive final : public BasicMember
 {
 	friend CH2Parser;
 public:
+	/**
+	* Default constructor
+	*/
 	explicit Primitive() : BasicMember(MemberType::Primitive), m_type(PrimitiveType::Invalid), m_mod(PrimitiveMods::Default) {}
 
+	/**
+	* Gets the type of the primitive
+	* @return Primitive type
+	*/
 	constexpr auto GetType() const { return m_type; }
+
+	/**
+	* Gets the primitive modificators (eg: signed)
+	* @return Primitive modificators
+	*/
 	constexpr auto GetMod() const { return m_mod; }
 private:
 	/**
@@ -74,4 +86,9 @@ private:
 	PrimitiveMods m_mod;
 };
 
+/**
+* Gets the default bit-size of the specified primitive
+* @param t Primitive type
+* @return Primitive size in bits
+*/
 uint8_t PrimitiveGetBitSize(PrimitiveType t);

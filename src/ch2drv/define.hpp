@@ -15,10 +15,19 @@
 class Define final : public BasicMember
 {
 public:
+	/**
+	* Default constructor
+	*/
 	explicit Define() : BasicMember(MemberType::Define) {}
 
+	/**
+	* Gets the value of the define
+	* @return Define value
+	*/
 	constexpr const auto& GetValue() const { return m_value; }
 private:
-	/** value of the define */
+	/**
+	* value of the define
+	*/
 	std::string m_value;
 };

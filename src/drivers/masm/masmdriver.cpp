@@ -9,6 +9,11 @@
 #include <writerhelp.hpp>
 #include <stack>
 
+/**
+* Adjust the type name of a link name
+* @param dst Destination string name
+* @param link Link type to check
+*/
 static void copy_fixed_name(std::string& dst, const LinkType& link)
 {
 	for (long long i = 0; i < link.pointers; i++)
@@ -38,10 +43,6 @@ static void copy_fixed_name(std::string& dst, const LinkType& link)
 	}
 }
 
-/**
-* Writes the members of a structure or union
-* @param stru Structure to parse
-*/
 void MasmDriver::WriteStructMembers(const Struct& stru)
 {
 	int64_t totalprct = 0;
@@ -148,12 +149,6 @@ void MasmDriver::WriteStructMembers(const Struct& stru)
 	}
 }
 
-/**
-* MASM does not directly support struct members of pointers, so we need to generate
-* a new typedef and put them there. This code preprocess all the struct members in search
-* of typedef to generate BEFORE starting to write the structure
-* @param stru Structure to preprocess
-*/
 void MasmDriver::PreprocessStruct(const Struct& stru)
 {
 	for (const auto& field : stru.GetFields())

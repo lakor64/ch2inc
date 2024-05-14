@@ -42,7 +42,7 @@ void CH2Parser::AddBasics(const PlatformInfo& plat)
 
 	for (const auto& name : g_types)
 	{
-		auto primitive_type = Utility::GetPrimitiveTypeForPlatform(name, plat);
+		const auto primitive_type = Utility::GetPrimitiveTypeForPlatform(name, plat);
 
 		if (PrimitiveType::Real4 == primitive_type ||
 			PrimitiveType::Real8 == primitive_type ||
@@ -55,7 +55,7 @@ void CH2Parser::AddBasics(const PlatformInfo& plat)
 		for (int i = static_cast<int>(PrimitiveMods::Default); i <= static_cast<int>(PrimitiveMods::Unsigned); i++)
 		{
 			std::string newName;
-			auto mod = static_cast<PrimitiveMods>(i);
+			const auto mod = static_cast<PrimitiveMods>(i);
 
 			if (mod == PrimitiveMods::Unsigned)
 				newName = "unsigned " + name;
@@ -101,7 +101,7 @@ void CH2Parser::Visit(const std::string& in, int clang_argc, const char** clang_
 	uint32_t flags = CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_SkipFunctionBodies;
 
 	CXTranslationUnit unit;
-	auto ec = clang_parseTranslationUnit2(index, in.c_str(), clang_argv, clang_argc,
+	const auto ec = clang_parseTranslationUnit2(index, in.c_str(), clang_argv, clang_argc,
 		nullptr, 0, 
 		flags,
 		&unit);
@@ -122,7 +122,7 @@ void CH2Parser::Visit(const std::string& in, int clang_argc, const char** clang_
 
 BasicMember* CH2Parser::FindType(const std::string& name)
 {
-	auto it = m_types.find(name);
+	const auto& it = m_types.find(name);
 	if (it == m_types.end())
 		return nullptr;
 
@@ -171,7 +171,7 @@ BasicMember* CH2Parser::VisitStructOrUnion(CXCursor c, bool isUnion)
 	else
 		rt = new Union();
 
-	auto type = clang_getCursorType(c);
+	const auto type = clang_getCursorType(c);
 	ClangStr name(clang_getTypeSpelling(type));
 
 	rt->m_name = name.Get();
@@ -186,8 +186,8 @@ BasicMember* CH2Parser::VisitField(CXCursor c, CXCursor p)
 	auto rt = new StructField();
 
 	ClangStr name(clang_getCursorSpelling(c));
-	auto type = clang_getCursorType(c);
-	auto parent_type = clang_getCursorType(p);
+	const auto type = clang_getCursorType(c);
+	const auto parent_type = clang_getCursorType(p);
 
 	ClangStr typeName(clang_getTypeSpelling(type));
 
@@ -228,7 +228,7 @@ BasicMember* CH2Parser::VisitTypedef(CXCursor c)
 	auto rt = new Typedef();
 
 	ClangStr name(clang_getCursorSpelling(c));
-	auto type = clang_getCursorType(c);
+	const auto type = clang_getCursorType(c);
 
 	rt->m_name = name.Get();
 	rt->m_size = clang_Type_getSizeOf(type) * 8;
@@ -248,7 +248,7 @@ BasicMember* CH2Parser::VisitTypedef(CXCursor c)
 BasicMember* CH2Parser::VisitEnumDecl(CXCursor c, CXCursor p)
 {
 	auto rt = new EnumField();
-	auto sizeType = clang_getEnumDeclIntegerType(c);
+	const auto sizeType = clang_getEnumDeclIntegerType(c);
 
 	ClangStr name(clang_getCursorSpelling(c));
 
@@ -281,12 +281,12 @@ BasicMember* CH2Parser::VisitEnumDecl(CXCursor c, CXCursor p)
 BasicMember* CH2Parser::VisitEnum(CXCursor c)
 {
 	auto rt = new Enum();
-	auto type = clang_getCursorType(c);
+	const auto type = clang_getCursorType(c);
 	ClangStr name(clang_getTypeSpelling(type));
 
 	rt->m_name = name.Get();
 
-	auto sizeType = clang_getEnumDeclIntegerType(c);
+	const auto sizeType = clang_getEnumDeclIntegerType(c);
 	rt->m_size = clang_Type_getSizeOf(sizeType);
 
 	return rt;
@@ -437,7 +437,7 @@ CXChildVisitResult CH2Parser::ParseChild(CXCursor cursor, CXCursor parent)
 
 	if (!skipadd)
 	{
-		auto it = m_types.find(member->GetName());
+		const auto& it = m_types.find(member->GetName());
 
 		if (it != m_types.end())
 		{

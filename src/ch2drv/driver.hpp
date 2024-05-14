@@ -17,7 +17,8 @@
 #include <string>
 
 /**
-* Configuration of a driver
+* Interface of a driver
+* A driver is a component that implements the format of how the file is written to the disk
 */
 class Driver
 {
@@ -133,9 +134,14 @@ protected:
 	*/
 	explicit Driver() : m_platform(), m_fp(nullptr) {}
 
-	/** Platform to target */
+	/**
+	* Platform to target
+	*/
 	PlatformInfo m_platform;
-	/** Output file reference */
+
+	/**
+	* Output file reference
+	*/
 	FILE* m_fp;
 };
 

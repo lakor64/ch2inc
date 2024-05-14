@@ -1,5 +1,5 @@
 /**
-* @file drivermain.c
+* @file drivermain.cpp
 * @author lakor64
 * @date 03/01/2024
 * @brief MASM driver entrypoint
@@ -8,7 +8,7 @@
 
 /**
 * Entrypoint of the driver
-* @return a filled structure of driver information
+* @return Implementation of a ch2inc driver
 */
 extern "C" Driver* CH2DriverEntrypoint(void)
 {

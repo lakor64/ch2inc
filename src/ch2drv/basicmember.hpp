@@ -80,15 +80,34 @@ class BasicMember
 {
 	friend CH2Parser;
 public:
+	/**
+	* Default deconstructor
+	*/
 	virtual ~BasicMember() = default;
 
+	/**
+	* Gets the name of the member
+	* @return Member name
+	*/
 	constexpr const auto& GetName() const { return m_name; }
+
+	/**
+	* Gets the member type ID
+	* @return Member ID
+	*/
 	constexpr auto GetTypeID() const { return m_type; }
 protected:
+	/**
+	* Default constructor for inherated types
+	* @param type Member ID
+	*/
 	explicit BasicMember(MemberType type) : m_type(type) {}
 
-	/** name of the file */
+	/**
+	* name of the file
+	*/
 	std::string m_name;
+
 	/**
 	* id of the type
 	* @see MemberType

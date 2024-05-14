@@ -13,6 +13,9 @@
 */
 struct LinkType
 {
+	/**
+	* Default constructor
+	*/
 	explicit LinkType() : ref_type(nullptr), pointers(0) {}
 
 	/** base type link reference (if it's a pointer this will be the base type) */

@@ -31,11 +31,33 @@ class Function final : public BasicMember
 {
 	friend CH2Parser;
 public:
+	/**
+	* Default constructor
+	*/
 	explicit Function() : BasicMember(MemberType::Function), m_calltype(CallType::Invalid), m_variadic(false), m_ret() {}
 
+	/**
+	* Gets the calling convention of this function
+	* @return Calling convention of the function
+	*/
 	constexpr auto GetCallType() const { return m_calltype; }
+
+	/**
+	* Checks if the function is a variadic function or not
+	* @return true if the function is variadic, otherwise false
+	*/
 	constexpr auto IsVariadic() const  { return m_variadic; }
+
+	/**
+	* Gets the return type of this function
+	* @return Return type
+	*/
 	constexpr const auto& GetReturnType() const { return m_ret; }
+
+	/**
+	* Gets the arguments of this function
+	* @return Array of arguments
+	*/
 	constexpr const auto& GetArguments() const { return m_arguments; }
 
 private:
@@ -44,13 +66,17 @@ private:
 	* @see CallType
 	*/
 	CallType m_calltype;
-	/** if the function is variadic */
+	/**
+	* if the function is variadic
+	*/
 	bool m_variadic;
 	/**
 	* return type of a function
 	* @note if the ref_type is nullptr then the return type is "void"
 	*/
 	FuncData m_ret;
-	/** list of all arguments of the function */
+	/**
+	* list of all arguments of the function
+	*/
 	std::vector<FuncData> m_arguments;
 };
