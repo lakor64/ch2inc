@@ -8,6 +8,7 @@
 
 #include "calltype.hpp"
 #include "linktype.hpp"
+#include "storagetype.hpp"
 #include <string>
 #include <vector>
 
@@ -34,7 +35,7 @@ public:
 	/**
 	* Default constructor
 	*/
-	explicit Function() : BasicMember(MemberType::Function), m_calltype(CallType::Invalid), m_variadic(false), m_ret() {}
+	explicit Function() : BasicMember(MemberType::Function), m_calltype(CallType::Invalid), m_variadic(false), m_ret(), m_storage(StorageType::None) {}
 
 	/**
 	* Gets the calling convention of this function
@@ -60,6 +61,12 @@ public:
 	*/
 	constexpr const auto& GetArguments() const { return m_arguments; }
 
+	/**
+	* Gets the storage type of the variable
+	* @return Variable storage type
+	*/
+	constexpr StorageType GetStorageType() const { return m_storage; }
+
 private:
 	/**
 	* type of the function call
@@ -79,4 +86,9 @@ private:
 	* list of all arguments of the function
 	*/
 	std::vector<FuncData> m_arguments;
+
+	/**
+	* Type of storage
+	*/
+	StorageType m_storage;
 };

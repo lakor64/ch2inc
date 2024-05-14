@@ -10,6 +10,7 @@
 #include "primitive.hpp"
 #include "ch2errcode.hpp"
 #include "calltype.hpp"
+#include "storagetype.hpp"
 
 #include <clang-c/CXErrorCode.h>
 #include <clang-c/Index.h>
@@ -37,4 +38,11 @@ namespace Utility
 	* @return library calling convention
 	*/
 	CallType CXCallConvToCH2CallConv(CXCallingConv c);
+
+	/**
+	* Converts a clang storage type to a library storage type
+	* @param c Storage class to convert
+	* @return library storage type
+	*/
+	StorageType CXStorageTypeToCH2StorageType(CX_StorageClass c);
 }

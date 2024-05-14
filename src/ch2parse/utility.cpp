@@ -106,3 +106,21 @@ CallType Utility::CXCallConvToCH2CallConv(CXCallingConv c)
 
 	return CallType::Invalid;
 }
+
+StorageType Utility::CXStorageTypeToCH2StorageType(CX_StorageClass c)
+{
+	switch (c)
+	{
+	case CX_SC_Extern:
+	case CX_SC_PrivateExtern:
+		return StorageType::Extern;
+	case CX_SC_Register:
+		return StorageType::Register;
+	case CX_SC_Static:
+		return StorageType::Static;
+	default:
+		break;
+	}
+
+	return StorageType::None;
+}

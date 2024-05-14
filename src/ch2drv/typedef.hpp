@@ -12,7 +12,7 @@
 /**
 * a C typedef
 */
-class Typedef final : public BasicMember
+class Typedef : public BasicMember
 {
 	friend CH2Parser;
 public:

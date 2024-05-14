@@ -5,4 +5,4 @@ if (WIN32)
 endif()
 
 add_library(ch2drvmasm SHARED ${SRC})
-target_link_libraries(ch2drvmasm PRIVATE ch2drv fmt::fmt)
+target_link_libraries(ch2drvmasm PRIVATE ch2drv fmt::fmt-header-only)

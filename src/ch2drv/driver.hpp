@@ -8,7 +8,7 @@
 
 #include "platform.hpp"
 #include "define.hpp"
-#include "typedef.hpp"
+#include "globalvar.hpp"
 #include "function.hpp"
 #include "enum.hpp"
 #include "struct.hpp"

@@ -391,7 +391,7 @@ int CH2Inc::Run(int argc, char** argv)
 			m_drvfnc->WriteDefine(*dynamic_cast<const Define*>(type));
 			break;
 		case MemberType::GlobalVar:
-			m_drvfnc->WriteGlobalVar(*dynamic_cast<const Typedef*>(type));
+			m_drvfnc->WriteGlobalVar(*dynamic_cast<const GlobalVar*>(type));
 			break;
 		case MemberType::Function:
 			m_drvfnc->WriteFunction(*dynamic_cast<const Function*>(type));

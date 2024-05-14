@@ -8,8 +8,8 @@
 #include "utility.hpp"
 #include "function.hpp"
 #include "enum.hpp"
-#include "typedef.hpp"
 #include "struct.hpp"
+#include "globalvar.hpp"
 #include "clangutils.hpp"
 
 #include <clang-c/Index.h>
@@ -146,7 +146,27 @@ bool CH2Parser::SetupLink(CXType type, LinkType& ref)
 		return ref.ref_type != nullptr;
 	}
 
-	ClangStr baseTypeName(clang_getTypeSpelling(baseType));
+	ClangStr baseTypeStr(clang_getTypeSpelling(baseType));
+	std::string baseTypeName = baseTypeStr.Get();
+
+	if (clang_isConstQualifiedType(baseType)) // remove "const " from name
+	{
+		const auto p = baseTypeName.find("const");
+		baseTypeName = baseTypeName.substr(p + 6);
+	}
+
+	if (clang_isVolatileQualifiedType(baseType)) // remove "volatile " from name
+	{
+		const auto p = baseTypeName.find("volatile");
+		baseTypeName = baseTypeName.substr(p + 9);
+	}
+
+	if (clang_isVolatileQualifiedType(baseType)) // remove "restrict " from name
+	{
+		const auto p = baseTypeName.find("restrict");
+		baseTypeName = baseTypeName.substr(p + 9);
+	}
+
 	ref.ref_type = FindType(baseTypeName);
 	return ref.ref_type != nullptr;
 }
@@ -301,6 +321,7 @@ BasicMember* CH2Parser::VisitFunc(CXCursor c)
 	const auto argLen = clang_Cursor_getNumArguments(c);
 
 	rt->m_name = name.Get();
+	rt->m_storage = Utility::CXStorageTypeToCH2StorageType(clang_Cursor_getStorageClass(c));
 
 	/* 
 	* ISO C forbids "void a(...)", and MS H2INC doesn't threat "void a()" as variadic.
@@ -351,8 +372,25 @@ BasicMember* CH2Parser::VisitFunc(CXCursor c)
 
 BasicMember* CH2Parser::VisitVarDecl(CXCursor c)
 {
-	// TODO
-	return nullptr;
+	auto rt = new GlobalVar();
+
+	ClangStr name(clang_getCursorSpelling(c));
+	const auto type = clang_getCursorType(c);
+
+	rt->m_name = name.Get();
+	rt->m_size = clang_Type_getSizeOf(type) * 8;
+
+	if (!SetupLink(type, rt->m_ref))
+	{
+		m_lasterr = CH2ErrorCodes::MissingType;
+		delete rt;
+		return nullptr;
+	}
+
+	rt->m_storage = Utility::CXStorageTypeToCH2StorageType(clang_Cursor_getStorageClass(c));
+	rt->m_volatile = clang_isVolatileQualifiedType(type);
+
+	return rt;
 }
 
 BasicMember* CH2Parser::VisitMacroDef(CXCursor c)
