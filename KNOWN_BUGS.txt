@@ -1,8 +1,4 @@
 Known bugs:
-
-- sometimes structres are not correctly aligned to 4 but rather to 8,
-passing -m32 does not help!
--- affected files: complexstruct.h, basictypes.h, seems to happen when a REAL8 is created
 - nested structures does not work
 - defines are not implemented (basics of A EQU B only on constant defines)
 - comments are not preserved (and probably won't be)
