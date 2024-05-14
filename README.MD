@@ -4,7 +4,7 @@ The following application is a dynamic converter from C header files to Assemble
 It's primary purpose was to replace the tool "h2inc.exe" used in the [BRender](https://github.com/lakor64/dsbrender) pipeline to achieve cross-platform host.h generation for other assembler than MASM.
 
 ## Dependencies
-- C++17 compiler
+- C++20 compiler
 - vcpkg
 - cxxopts
 - libclang (Clang C API)

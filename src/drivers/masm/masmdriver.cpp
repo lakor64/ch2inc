@@ -70,7 +70,7 @@ void MasmDriver::WriteStructMembers(const Struct& stru)
 				}
 			}
 
-			writefmt(m_fp, "%s\t\t%s\t\t%s\n", field->GetName().c_str(), typeName.c_str(), usetags ? "<>" : "?");
+			writefmt(m_fp, "{}\t\t{}\t\t{}\n", field->GetName(), typeName, usetags ? "<>" : "?");
 		}
 		else
 		{
@@ -83,7 +83,7 @@ void MasmDriver::WriteStructMembers(const Struct& stru)
 				- iterare trough all of our stack and write data from last to begin
 			*/
 
-			const auto structname = stru.GetName().c_str() + 7;
+			const std::string_view structname = stru.GetName().c_str() + 7;
 			std::stack<StructField*> m_bitstack;
 			auto prim = dynamic_cast<const Primitive*>(field->GetRef().ref_type)->GetType();
 			int64_t processed = field->GetSize();
@@ -112,7 +112,7 @@ void MasmDriver::WriteStructMembers(const Struct& stru)
 			}
 
 			// rec@x_0   RECORD
-			writefmt(m_fp, "rec@%s_%lld\t\tRECORD\t", structname, totalprct);
+			writefmt(m_fp, "rec@{}_{}\t\tRECORD\t", structname, totalprct);
 
 			bool writeretn = false;
 
@@ -121,7 +121,7 @@ void MasmDriver::WriteStructMembers(const Struct& stru)
 				// this adds the missing padding
 
 				// @0@x:5
-				writefmt(m_fp, "@0@%s:%lld", structname, PrimitiveGetBitSize(prim) - processed);
+				writefmt(m_fp, "@0@{}:{}", structname, PrimitiveGetBitSize(prim) - processed);
 				writeretn = true;
 			}
 
@@ -130,18 +130,18 @@ void MasmDriver::WriteStructMembers(const Struct& stru)
 				if (!writeretn)
 					writeretn = true;
 				else
-					writesng(m_fp, ",\n\t\t\t\t");
+					writefmt(m_fp, ",\n\t\t\t\t");
 
 					// p@x:3
 				const auto top = m_bitstack.top();
-				writefmt(m_fp, "%s@%s:%lld", top->GetName().c_str(), structname, top->GetSize());
+				writefmt(m_fp, "{}@{}:{}", top->GetName(), structname, top->GetSize());
 
 				m_bitstack.pop();
 			}
 
 			// @bit_0  rec@x_0 <>
 			writefmt(m_fp, "\n"
-							"@bit_%lld\t\trec@%s_%lld <>\n", totalprct, structname, totalprct);
+							"@bit_{}\t\trec@{}_{} <>\n", totalprct, structname, totalprct);
 
 			totalprct++;
 		}
@@ -172,7 +172,7 @@ void MasmDriver::PreprocessStruct(const Struct& stru)
 			else
 				fullname = fullname.erase(fullname.size() - 2);
 
-			writefmt(m_fp, "@t_%lld\t\tTYPEDEF\t\t%s\n", m_total_preprocess_typedef, fullname.c_str());
+			writefmt(m_fp, "@t_{}\t\tTYPEDEF\t\t{}\n", m_total_preprocess_typedef, fullname);
 			m_total_preprocess_typedef++;
 		}
 	}
@@ -180,7 +180,7 @@ void MasmDriver::PreprocessStruct(const Struct& stru)
 
 void MasmDriver::WriteFileStart(void)
 {
-	writesng(m_fp,
+	writefmt(m_fp,
 		"\n"
 		"option expr32\n"
 		"option casemap:none\n"
@@ -191,22 +191,22 @@ void MasmDriver::WriteFileStart(void)
 
 void MasmDriver::WriteFileEnd(void)
 {
-	writesng(m_fp, "; End of the file\n");
+	writefmt(m_fp, "; End of the file\n");
 }
 
 void MasmDriver::WriteSingleComment(const std::string& comment)
 {
-	writefmt(m_fp, "; %s\n", comment.c_str());
+	writefmt(m_fp, "; {}\n", comment);
 }
 
 void MasmDriver::WriteMultiComment(const std::vector<std::string>& v)
 {
-	writesng(m_fp, "COMMENT @$?\n\n");
+	writefmt(m_fp, "COMMENT @$?\n\n");
 	for (const auto& comment : v)
 	{
-		writesng(m_fp, comment.c_str());
+		writefmt(m_fp, comment);
 	}
-	writesng(m_fp, "\n@$?\n");
+	writefmt(m_fp, "\n@$?\n");
 }
 
 void MasmDriver::WriteTypeDef(const Typedef& type)
@@ -214,51 +214,55 @@ void MasmDriver::WriteTypeDef(const Typedef& type)
 	std::string typeName = "";
 	copy_fixed_name(typeName, type.GetRef());
 
-	writefmt(m_fp, "%s\t\tTYPEDEF\t\t%s\n\n", type.GetName().c_str(), typeName.c_str());
+	writefmt(m_fp, "{}\t\tTYPEDEF\t\t{}\n\n", type.GetName(), typeName);
 }
 
 void MasmDriver::WriteStruct(const Struct& stru)
 {
 	PreprocessStruct(stru);
+	const std::string_view name = stru.GetName().c_str() + 7;
+
 	// we need to remove "struct " part of the name, that's why there's + 7
-	writefmt(m_fp, "%s\t\tSTRUCT %lldt\n", stru.GetName().c_str() + 7, stru.GetAlign() / 8);
+	writefmt(m_fp, "{}\t\tSTRUCT {}t\n", name, stru.GetAlign() / 8);
 	WriteStructMembers(stru);
-	writefmt(m_fp, "%s\t\tENDS\n\n", stru.GetName().c_str() + 7);
+	writefmt(m_fp, "{}\t\tENDS\n\n", name);
 }
 
 void MasmDriver::WriteUnion(const Union& fnc)
 {
+	const std::string_view name = fnc.GetName().c_str() + 6;
 	PreprocessStruct(dynamic_cast<const Struct&>(fnc));
-	writefmt(m_fp, "%s\t\tUNION\n", fnc.GetName().c_str() + 6);
+	writefmt(m_fp, "{}\t\tUNION\n", name);
 	WriteStructMembers(dynamic_cast<const Struct&>(fnc));
-	writefmt(m_fp, "%s\t\tENDS\n\n", fnc.GetName().c_str() + 6);
+	writefmt(m_fp, "{}\t\tENDS\n\n", name);
 }
 
 void MasmDriver::WriteEnum(const Enum& fnc)
 {
 	for (const auto& p : fnc.GetFields())
 	{
-		writefmt(m_fp, "%s\t\tEQU\t\t%llut\n", p->GetName().c_str(), p->GetValue());
+		writefmt(m_fp, "{}\t\tEQU\t\t{}t\n", p->GetName(), p->GetValue());
 	}
 }
 
 void MasmDriver::WriteFunction(const Function& fnc)
 {
-	const char* callType = "";
+	std::string_view callType;
 	int isfirst = 1;
 
 	if (m_platform.GetBits() != 64) // MASM x64 does not use C/PASCAL
 	{
 		callType = get_calling_string(fnc.GetCallType());
-		if (!callType)
+		if (callType.empty())
 		{
 			// MASM unsupported types
-			writefmt(m_fp, "; function %s ignored as it uses an unsupported call type (%s)\n\n", fnc.GetName().c_str(), CallType2Str(fnc.GetCallType()));
+			callType = CallType2Str(fnc.GetCallType());
+			writefmt(m_fp, "; function %s ignored as it uses an unsupported call type ({})\n\n", fnc.GetName(), callType);
 			return;
 		}
 	}
 
-	writefmt(m_fp, "@proto_%lld\t\tTYPEDEF\t\tPROTO %s ", m_total_protos, callType);
+	writefmt(m_fp, "@proto_{}\t\tTYPEDEF\t\tPROTO {} ", m_total_protos, callType);
 
 	// MASM does not write the return type so we skip that
 
@@ -269,16 +273,16 @@ void MasmDriver::WriteFunction(const Function& fnc)
 		if (isfirst)
 			isfirst = 0;
 		else
-			writesng(m_fp, ", ");
+			writefmt(m_fp, ", ");
 
 		copy_fixed_name(type, arg.ref);
-		writefmt(m_fp, ":%s", type.c_str());
+		writefmt(m_fp, ":{}", type);
 	}
 
 	if (fnc.IsVariadic())
-		writesng(m_fp, ", :VARARG");
+		writefmt(m_fp, ", :VARARG");
 
-	writefmt(m_fp, "\n%s\t\tPROTO\t\t@proto_%lld\n\n", fnc.GetName().c_str(), m_total_protos);
+	writefmt(m_fp, "\n{}\t\tPROTO\t\t@proto_{}\n\n", fnc.GetName(), m_total_protos);
 	m_total_protos++;
 }
 

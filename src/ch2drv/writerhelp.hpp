@@ -1,23 +1,22 @@
+/**
+* @file writefmt.hpp
+* @author lakor64
+* @date 14/05/2024
+* @brief Simple writer helper
+*/
 #pragma once
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
+#include <format>
+#include <string_view>
 
-static void writesng(FILE* fp, const char* ch)
+static void writefmt(FILE* fp, const std::string_view& fmt)
 {
-	fwrite(ch, strlen(ch), 1, fp);
+	fwrite(fmt.data(), fmt.size(), 1, fp);
 }
 
-static void writefmt(FILE* fp, const char* fmt, ...)
+template <typename... Args>
+static void writefmt(FILE* fp, const std::string_view& fmt, Args&&... args)
 {
-	char buffer[0x200];
-	va_list vl;
-
-	va_start(vl, fmt);
-	vsprintf_s(buffer, _countof(buffer), fmt, vl);
-	va_end(vl);
-
-	fwrite(buffer, strlen(buffer), 1, fp);
+	auto f = std::vformat(fmt, std::make_format_args(args...));
+	writefmt(fp, f);
 }
