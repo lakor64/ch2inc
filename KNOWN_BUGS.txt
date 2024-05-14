@@ -1,4 +1,3 @@
 Known bugs:
 - nested structures does not work
 - defines are not implemented (basics of A EQU B only on constant defines)
-- comments are not preserved (and probably won't be)
