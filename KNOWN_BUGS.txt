@@ -1,3 +1,8 @@
 Known bugs:
+- Altrough this is not an issue, ch2inc generated p function in funcandglobalvar.h
 - nested structures does not work
 - defines are not implemented (basics of A EQU B only on constant defines)
+
+Possible libclang bugs:
+- When declaring "extern int" with "-mrtd" the function is incorrectly defaulted as __cdecl and not __stdcall like H2INC?
+

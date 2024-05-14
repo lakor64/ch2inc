@@ -6,7 +6,7 @@
 */
 #pragma once
 
-#include <format>
+#include <fmt/format.h>
 #include <string_view>
 
 /**
@@ -28,6 +28,6 @@ static void writefmt(FILE* fp, const std::string_view& fmt)
 template <typename... Args>
 static void writefmt(FILE* fp, const std::string_view& fmt, Args&&... args)
 {
-	auto f = std::vformat(fmt, std::make_format_args(args...));
+	auto f = fmt::vformat(fmt, fmt::make_format_args(args...));
 	writefmt(fp, f);
 }
