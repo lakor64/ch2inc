@@ -269,14 +269,16 @@ void MasmDriver::WriteFunction(const Function& fnc)
 
 	if (m_platform.GetBits() != 64) // MASM x64 does not use C/PASCAL
 	{
-		callType = get_calling_string(fnc.GetCallType());
-		if (callType.empty())
+		const auto callTypeC = get_calling_string(fnc.GetCallType());
+		if (!callTypeC)
 		{
 			// MASM unsupported types
 			callType = CallType2Str(fnc.GetCallType());
-			writefmt(m_fp, "; function %s ignored as it uses an unsupported call type ({})\n\n", fnc.GetName(), callType);
+			writefmt(m_fp, "; function {} ignored as it uses an unsupported call type ({})\n\n", fnc.GetName(), callType);
 			return;
 		}
+		else
+			callType = callTypeC;
 	}
 
 	writefmt(m_fp, "@proto_{}\t\tTYPEDEF\t\tPROTO {} ", m_total_protos, callType);
