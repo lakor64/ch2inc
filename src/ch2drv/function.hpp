@@ -17,12 +17,16 @@
 */
 struct FuncData
 {
-	explicit FuncData() : ref() {}
+	explicit FuncData() : ref(), volatil(false), restric(false) {}
 
 	/** reference type */
 	LinkType ref;
 	/** name info */
 	std::string name;
+	/** if it's volatile */
+	bool volatil;
+	/** if it's restrict */
+	bool restric;
 };
 
 /**

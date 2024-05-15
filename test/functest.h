@@ -17,3 +17,9 @@ extern void h(void* x, void **** y, int ******* a);
 
 //extern void __vectorcall g(void);
 //extern void __vectorcall h(int a, int b, int c, int d);
+
+extern void j(volatile int a);
+
+#ifdef __CH2INC__
+extern void k(int* restrict p);
+#endif

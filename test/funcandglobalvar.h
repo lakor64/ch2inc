@@ -34,3 +34,7 @@ static struct ef ggg;
 static struct ef* ooo;
 
 extern struct ef** qqq;
+
+#ifdef __CH2INC__
+extern struct ef* restrict tree;
+#endif

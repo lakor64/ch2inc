@@ -361,8 +361,10 @@ BasicMember* CH2Parser::VisitFunc(CXCursor c)
 			return nullptr;
 		}
 
-		ClangStr argumentName(clang_getTypeSpelling(argumentType));
+		ClangStr argumentName(clang_getCursorSpelling(argCursor));
 		d.name = argumentName.Get();
+		d.restric = clang_isRestrictQualifiedType(argumentType);
+		d.volatil = clang_isVolatileQualifiedType(argumentType);
 
 		rt->m_arguments.push_back(d);
 	}
@@ -389,6 +391,7 @@ BasicMember* CH2Parser::VisitVarDecl(CXCursor c)
 
 	rt->m_storage = Utility::CXStorageTypeToCH2StorageType(clang_Cursor_getStorageClass(c));
 	rt->m_volatile = clang_isVolatileQualifiedType(type);
+	rt->m_restrict = clang_isRestrictQualifiedType(type);
 
 	return rt;
 }

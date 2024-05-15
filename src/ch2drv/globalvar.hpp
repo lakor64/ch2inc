@@ -38,4 +38,6 @@ private:
 	StorageType m_storage;
 	/** If the variable is volatile */
 	bool m_volatile;
+	/** If the variable is restricted */
+	bool m_restrict;
 };
