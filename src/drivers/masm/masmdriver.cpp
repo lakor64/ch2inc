@@ -51,6 +51,7 @@ void MasmDriver::WriteType(const LinkType& ref, const std::string_view& field_na
 	if (ref.pointers)
 	{
 		typeName = "@t_" + std::to_string(m_total_used_typedef);
+		m_total_used_typedef++;
 	}
 	else
 	{
