@@ -155,27 +155,43 @@ void MasmDriver::WriteStructMembers(const Struct& stru)
 	}
 }
 
+void MasmDriver::PreprocessType(const LinkType& link)
+{
+	if (link.pointers)
+	{
+		std::string fullname = "";
+
+		for (long long i = 0; i < link.pointers; i++)
+		{
+			fullname += "PTR ";
+		}
+
+		if (link.ref_type->GetName() != "*")
+			fullname += link.ref_type->GetName();
+		else
+			fullname = fullname.erase(fullname.size() - 2);
+
+		if (link.ref_type->GetTypeID() == MemberType::Union)
+		{
+			const auto p = fullname.find("union ");
+			fullname = fullname.erase(p, 6);
+		}
+		else if (link.ref_type->GetTypeID() == MemberType::Struct)
+		{
+			const auto p = fullname.find("struct ");
+			fullname = fullname.erase(p, 7);
+		}
+
+		writefmt(m_fp, "@t_{}\t\tTYPEDEF\t\t{}\n", m_total_preprocess_typedef, fullname);
+		m_total_preprocess_typedef++;
+	}
+}
+
 void MasmDriver::PreprocessStruct(const Struct& stru)
 {
 	for (const auto& field : stru.GetFields())
 	{
-		if (field->GetRef().pointers)
-		{
-			std::string fullname = "";
-
-			for (long long i = 0; i < field->GetRef().pointers; i++)
-			{
-				fullname += "PTR ";
-			}
-
-			if (field->GetRef().ref_type->GetName() != "*")
-				fullname += field->GetRef().ref_type->GetName();
-			else
-				fullname = fullname.erase(fullname.size() - 2);
-
-			writefmt(m_fp, "@t_{}\t\tTYPEDEF\t\t{}\n", m_total_preprocess_typedef, fullname);
-			m_total_preprocess_typedef++;
-		}
+		PreprocessType(field->GetRef());
 	}
 }
 
@@ -303,7 +319,9 @@ void MasmDriver::WriteGlobalVar(const GlobalVar& def)
 			m_data_written = true;
 		}
 
+		PreprocessType(def.GetRef());
 		WriteType(def.GetRef(), def.GetName());
+		writefmt(m_fp, "\n");
 	}
 	else
 	{
@@ -311,7 +329,7 @@ void MasmDriver::WriteGlobalVar(const GlobalVar& def)
 
 		std::string name = "";
 		copy_fixed_name(name, def.GetRef());
-		writefmt(m_fp, "EXTERNDEF\t\tC\t{}:{}\n", def.GetName(), name);
+		writefmt(m_fp, "EXTERNDEF\t\tC\t{}:{}\n\n", def.GetName(), name);
 	}
 }
 

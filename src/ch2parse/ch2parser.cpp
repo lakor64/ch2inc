@@ -161,7 +161,7 @@ bool CH2Parser::SetupLink(CXType type, LinkType& ref)
 		baseTypeName = baseTypeName.substr(p + 9);
 	}
 
-	if (clang_isVolatileQualifiedType(baseType)) // remove "restrict " from name
+	if (clang_isRestrictQualifiedType(baseType)) // remove "restrict " from name
 	{
 		const auto p = baseTypeName.find("restrict");
 		baseTypeName = baseTypeName.substr(p + 9);
@@ -447,7 +447,15 @@ CXChildVisitResult CH2Parser::ParseChild(CXCursor cursor, CXCursor parent)
 		break;
 
 
-	case CXCursor_IntegerLiteral: // skip, where there are the literals anyway...
+	case CXCursor_IntegerLiteral: // skip, we don't read literals
+	case CXCursor_FloatingLiteral: // skip, we don't read literals
+	case CXCursor_StringLiteral:
+	case CXCursor_CharacterLiteral:
+	case CXCursor_ImaginaryLiteral:
+	case CXCursor_FixedPointLiteral:
+	case CXCursor_ObjCStringLiteral:
+	case CXCursor_CompoundLiteralExpr:
+	case CXCursor_CXXNullPtrLiteralExpr:
 	case CXCursor_InclusionDirective: // skip inclusions as they are part of preprocessor
 	case CXCursor_ParmDecl: // we have parsed them already
 	case CXCursor_MacroExpansion: // skip macro expansions, we do not support %ifdef %else %endif and neither h2inc did

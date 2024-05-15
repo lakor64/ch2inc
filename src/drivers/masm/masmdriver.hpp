@@ -116,13 +116,22 @@ public:
 	void WriteGlobalVar(const GlobalVar& def) override;
 
 private:
+
 	/**
-	* MASM does not directly support struct members of pointers, so we need to generate
-	* a new typedef and put them there. This code preprocess all the struct members in search
+	* This code preprocess all the struct members in search 
 	* of typedef to generate BEFORE starting to write the structure
 	* @param stru Structure to preprocess
 	*/
 	void PreprocessStruct(const Struct& stru);
+
+	/**
+	* MASM does not directly support type declarations of pointers, so we need to generate
+	* a new typedef and put them there.
+	* This code will preprocess the type and verify if we need to insert a TYPEDEF before the
+	* type delcaration.
+	* @param link Link to preprocess
+	*/
+	void PreprocessType(const LinkType& link);
 
 	/**
 	* Writes the members of a structure or union
