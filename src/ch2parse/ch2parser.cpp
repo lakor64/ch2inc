@@ -118,6 +118,13 @@ void CH2Parser::Visit(const std::string& in, int clang_argc, const char** clang_
 		-> CXChildVisitResult {
 			return ((CH2Parser*)data)->ParseChild(c, parent);
 		}, this);
+
+	/*
+	* During nested structures, clang parses a nested after the parent structure
+	* therefore we can get to a point where a parent structure is before the child structure
+	* This function amis to fix that.
+	*/
+	FixupDecls();
 }
 
 BasicMember* CH2Parser::FindType(const std::string& name)
@@ -198,6 +205,9 @@ BasicMember* CH2Parser::VisitStructOrUnion(CXCursor c, bool isUnion)
 	rt->m_size = clang_Type_getSizeOf(type) * 8;
 	rt->m_align = clang_Type_getAlignOf(type) * 8;
 
+	if (rt->m_name.find("(unnamed") != std::string::npos)
+		rt->m_unnamed = true;
+
 	return rt;
 }
 
@@ -206,20 +216,12 @@ BasicMember* CH2Parser::VisitField(CXCursor c, CXCursor p)
 	auto rt = new StructField();
 
 	ClangStr name(clang_getCursorSpelling(c));
-	const auto type = clang_getCursorType(c);
+	auto type = clang_getCursorType(c);
+
+	if (type.kind == CXType_Elaborated)
+		type = clang_Type_getNamedType(type);
+
 	const auto parent_type = clang_getCursorType(p);
-
-	ClangStr typeName(clang_getTypeSpelling(type));
-
-	rt->m_name = name.Get();
-	rt->m_size = clang_getFieldDeclBitWidth(c);
-
-	if (!SetupLink(type, rt->m_ref))
-	{
-		m_lasterr = CH2ErrorCodes::MissingType;
-		delete rt;
-		return nullptr;
-	}
 
 	auto parent = FindType(p);
 
@@ -238,7 +240,34 @@ BasicMember* CH2Parser::VisitField(CXCursor c, CXCursor p)
 	}
 
 	rt->m_parent = dynamic_cast<Struct*>(parent);
-	rt->m_parent->m_fields.push_back(rt);
+
+	// fields are sequential, cannot use a map
+	for (const auto& f : rt->m_parent->m_fields)
+	{
+		if (f->GetName() == name.Get())
+		{
+			// field was already added, skip
+			// this is required due to how nested structure parse are handled (they are parsed two times)
+			// the sad thing is that we cannot know if the structure is going to be parsed again
+			delete rt;
+			return nullptr;
+		}
+	}
+
+	ClangStr typeName(clang_getTypeSpelling(type));
+
+	rt->m_name = name.Get();
+	rt->m_size = clang_getFieldDeclBitWidth(c);
+
+
+	if (!SetupLink(type, rt->m_ref))
+	{
+		m_lasterr = CH2ErrorCodes::MissingType;
+		delete rt;
+		return nullptr;
+	}
+	
+	rt->m_parent->m_fields.emplace_back(rt);
 
 	return rt;
 }
@@ -434,10 +463,10 @@ CXChildVisitResult CH2Parser::ParseChild(CXCursor cursor, CXCursor parent)
 		break;
 
 	case CXCursor_MacroDefinition:
-		if (clang_Cursor_isMacroBuiltin(cursor) || clang_Cursor_isMacroFunctionLike(cursor))
+		//if (clang_Cursor_isMacroBuiltin(cursor) || clang_Cursor_isMacroFunctionLike(cursor))
 			skip = true; // skip macros that we cannot parse
-		else
-			member = VisitMacroDef(cursor);
+		//else
+		//	member = VisitMacroDef(cursor);
 
 		break;
 
@@ -481,17 +510,22 @@ CXChildVisitResult CH2Parser::ParseChild(CXCursor cursor, CXCursor parent)
 	if (skip)
 		return CXChildVisit_Continue;
 
-	if (!member)
-		return CXChildVisit_Break;
-
 	if (!skipadd)
 	{
+		if (!member)
+			return CXChildVisit_Break;
+
 		const auto& it = m_types.find(member->GetName());
 
 		if (it != m_types.end())
 		{
 			delete member;
-			return CXChildVisit_Break;
+			/*
+			* libclang parses nested structures two times, probably this is done because
+			*  it resolved the nested structure and then inform us to return at the parsing
+			*   of the original structure
+			*/
+			return CXChildVisit_Recurse;
 		}
 
 		m_types.insert_or_assign(member->GetName(), member);
@@ -499,4 +533,54 @@ CXChildVisitResult CH2Parser::ParseChild(CXCursor cursor, CXCursor parent)
 	}
 
 	return CXChildVisit_Recurse;
+}
+
+void CH2Parser::FixupDecls()
+{
+	// 1. order items by id
+	std::unordered_map<std::string, size_t> order_map;
+	auto& types = m_cf->m_types;
+
+	for (size_t i = 0; i < types.size(); i++)
+	{
+		order_map.insert_or_assign(types[i]->GetName(), i);
+	}
+
+	auto& it = types.begin();
+
+	std::vector<BasicMember*> push_members;
+
+	for (; it != types.end(); )
+	{
+		bool erased = false;
+
+		if ((*it)->GetTypeID() == MemberType::Struct || (*it)->GetTypeID() == MemberType::Union)
+		{
+			const auto& s = dynamic_cast<Struct*>((*it));
+			for (const auto& e : s->GetFields())
+			{
+				if (e->GetRef().ref_type->GetTypeID() == MemberType::Struct || e->GetRef().ref_type->GetTypeID() == MemberType::Union)
+				{
+					const auto& s2 = dynamic_cast<Struct*>(e->GetRef().ref_type);
+					
+					if (order_map[s2->GetName()] > order_map[s->GetName()])
+					{
+						// erase the type as we have to push at the end
+						it = types.erase(it);
+						push_members.emplace_back(s);
+						erased = true;
+						break;
+					}
+				}
+			}
+		}
+
+		if (!erased)
+			it++;
+	}
+
+	for (const auto& m : push_members)
+	{
+		m_cf->m_types.emplace_back(m);
+	}
 }

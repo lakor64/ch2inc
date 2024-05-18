@@ -61,7 +61,7 @@ public:
 	/**
 	* Default constructor
 	*/
-	explicit Struct() : BasicMember(MemberType::Struct), m_align(0), m_size(0) {}
+	explicit Struct() : BasicMember(MemberType::Struct), m_align(0), m_size(0), m_unnamed(false) {}
 
 	/**
 	* Default destructor
@@ -86,6 +86,12 @@ public:
 	*/
 	constexpr const auto& GetFields() const { return m_fields; }
 
+	/**
+	* Checks if the structure is unnamed
+	* @return true if it's unnamed, otherwise false
+	*/
+	constexpr auto IsUnnamed() const { return m_unnamed; }
+
 protected:
 	/** alignment of the structure in bits */
 	int64_t m_align;
@@ -93,6 +99,8 @@ protected:
 	int64_t m_size;
 	/** list of all fields inside the structure */
 	std::vector<StructField*> m_fields;
+	/** if it's an unamed struct */
+	bool m_unnamed;
 };
 
 /**

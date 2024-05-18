@@ -9,12 +9,8 @@
 #include <writerhelp.hpp>
 #include <stack>
 
-/**
-* Adjust the type name of a link name
-* @param dst Destination string name
-* @param link Link type to check
-*/
-static void copy_fixed_name(std::string& dst, const LinkType& link)
+
+void MasmDriver::CopyName(std::string& dst, const LinkType& link)
 {
 	for (long long i = 0; i < link.pointers; i++)
 	{
@@ -31,11 +27,29 @@ static void copy_fixed_name(std::string& dst, const LinkType& link)
 	}
 	else if (link.ref_type->GetTypeID() == MemberType::Union)
 	{
-		dst += link.ref_type->GetName().c_str() + 6; // remove "union "
+		const std::string n = link.ref_type->GetName().c_str() + 6; // remove "union "
+		for (size_t k = 0; k < m_tag_link.size(); k++)
+		{
+			if (m_tag_link[k] == n)
+			{
+				dst += "@tag_ " + std::to_string(k);
+				return;
+			}
+		}
+		dst += n;
 	}
 	else if (link.ref_type->GetTypeID() == MemberType::Struct)
 	{
-		dst += link.ref_type->GetName().c_str() + 7; // remove "struct "
+		const std::string n = link.ref_type->GetName().c_str() + 7; // remove "struct "
+		for (size_t k = 0; k < m_tag_link.size(); k++)
+		{
+			if (m_tag_link[k] == n)
+			{
+				dst += "@tag_" + std::to_string(k);
+				return;
+			}
+		}
+		dst += n;
 	}
 	else
 	{
@@ -55,7 +69,7 @@ void MasmDriver::WriteType(const LinkType& ref, const std::string_view& field_na
 	}
 	else
 	{
-		copy_fixed_name(typeName, ref);
+		CopyName(typeName, ref);
 
 		if (ref.ref_type->GetTypeID() == MemberType::Struct || ref.ref_type->GetTypeID() == MemberType::Union)
 		{
@@ -230,7 +244,7 @@ void MasmDriver::WriteMultiComment(const std::vector<std::string>& v)
 void MasmDriver::WriteTypeDef(const Typedef& type)
 {
 	std::string typeName = "";
-	copy_fixed_name(typeName, type.GetRef());
+	CopyName(typeName, type.GetRef());
 
 	writefmt(m_fp, "{}\t\tTYPEDEF\t\t{}\n\n", type.GetName(), typeName);
 }
@@ -238,7 +252,13 @@ void MasmDriver::WriteTypeDef(const Typedef& type)
 void MasmDriver::WriteStruct(const Struct& stru)
 {
 	PreprocessStruct(stru);
-	const std::string_view name = stru.GetName().c_str() + 7;
+	std::string name = stru.GetName().c_str() + 7;
+
+	if (stru.IsUnnamed())
+	{
+		m_tag_link.emplace_back(name);
+		name = "@tag_" + std::to_string(m_tag_link.size() - 1);		
+	}
 
 	// we need to remove "struct " part of the name, that's why there's + 7
 	writefmt(m_fp, "{}\t\tSTRUCT {}t\n", name, stru.GetAlign() / 8);
@@ -295,7 +315,7 @@ void MasmDriver::WriteFunction(const Function& fnc)
 		else
 			writefmt(m_fp, ", ");
 
-		copy_fixed_name(type, arg.ref);
+		CopyName(type, arg.ref);
 		writefmt(m_fp, ":{}", type);
 	}
 
@@ -331,7 +351,7 @@ void MasmDriver::WriteGlobalVar(const GlobalVar& def)
 		// EXTERNDEF
 
 		std::string name = "";
-		copy_fixed_name(name, def.GetRef());
+		CopyName(name, def.GetRef());
 		writefmt(m_fp, "EXTERNDEF\t\tC\t{}:{}\n\n", def.GetName(), name);
 	}
 }

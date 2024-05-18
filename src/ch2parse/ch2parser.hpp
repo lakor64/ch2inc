@@ -157,6 +157,11 @@ private:
 	void AddBasics(const PlatformInfo& plat);
 
 	/**
+	* Fix order of declarations
+	*/
+	void FixupDecls();
+
+	/**
 	* Last error
 	*/
 	CH2ErrorCodes m_lasterr;

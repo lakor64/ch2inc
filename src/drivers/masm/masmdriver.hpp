@@ -7,6 +7,7 @@
 #pragma once
 
 #include <driver.hpp>
+#include <vector>
 
 class MasmDriver final : public Driver
 {
@@ -118,6 +119,13 @@ public:
 private:
 
 	/**
+	* Adjust the type name of a link name
+	* @param dst Destination string name
+	* @param link Link type to check
+	*/
+	void CopyName(std::string& dst, const LinkType& link);
+
+	/**
 	* This code preprocess all the struct members in search 
 	* of typedef to generate BEFORE starting to write the structure
 	* @param stru Structure to preprocess
@@ -152,6 +160,8 @@ private:
 	int64_t m_total_used_typedef;
 	/** total function protos */
 	int64_t m_total_protos;
+	/** total used tags */
+	std::vector<std::string> m_tag_link;
 	/** written the .DATA command */
 	bool m_data_written;
 };
