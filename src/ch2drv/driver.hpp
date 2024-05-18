@@ -17,6 +17,32 @@
 #include <string>
 
 /**
+* Driver configuration
+*/
+struct DriverConfig
+{
+	/**
+	* Default constructor
+	*/
+	explicit DriverConfig() : verbose(false), fp(nullptr) {}
+
+	/**
+	* Verbose error message logging
+	*/
+	bool verbose;
+
+	/**
+	* Platform info
+	*/
+	PlatformInfo platform;
+
+	/**
+	* File pointer
+	*/
+	FILE* fp;
+};
+
+/**
 * Interface of a driver
 * A driver is a component that implements the format of how the file is written to the disk
 */
@@ -51,18 +77,6 @@ public:
 	* @param defs define array to modify
 	*/
 	virtual void AppendExtraDefines(std::vector<std::string>& defs) = 0;
-
-	/**
-	* this function sets the platform information to the driver
-	* @param plat Platform name
-	*/
-	virtual void SetPlatformInfo(const PlatformInfo& plat) { m_platform = plat; }
-
-	/**
-	* sets the file pointer information
-	* @param fp File pointer
-	*/
-	virtual void SetFileInfo(FILE* fp) { m_fp = fp; }
 
 	/**
 	* Writes the start marker of the file
@@ -128,21 +142,22 @@ public:
 	*/
 	virtual void WriteGlobalVar(const GlobalVar& def) = 0;
 
+	/**
+	* Sets the driver config
+	* @param cfg Driver config
+	*/
+	virtual void SetConfig(const DriverConfig& cfg) { m_cfg = cfg; }
+
 protected:
 	/**
 	* Default constructor
 	*/
-	explicit Driver() : m_platform(), m_fp(nullptr) {}
+	explicit Driver() {}
 
 	/**
-	* Platform to target
+	* Driver config
 	*/
-	PlatformInfo m_platform;
-
-	/**
-	* Output file reference
-	*/
-	FILE* m_fp;
+	DriverConfig m_cfg;
 };
 
 

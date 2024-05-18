@@ -10,10 +10,14 @@
 #include "enum.hpp"
 #include "struct.hpp"
 #include "globalvar.hpp"
+#include "define.hpp"
 #include "clangutils.hpp"
 
+#include <algorithm>
 #include <clang-c/Index.h>
+#include <exprtk.hpp>
 
+// TODO: Separate and simplify this big chunk of garbage
 
 void CH2Parser::AddPrimitive(const std::string& name, PrimitiveType type, PrimitiveMods mod)
 {
@@ -100,11 +104,10 @@ void CH2Parser::Visit(const std::string& in, int clang_argc, const char** clang_
 	// create translation unit
 	uint32_t flags = CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_SkipFunctionBodies;
 
-	CXTranslationUnit unit;
 	const auto ec = clang_parseTranslationUnit2(index, in.c_str(), clang_argv, clang_argc,
 		nullptr, 0, 
 		flags,
-		&unit);
+		&m_unit);
 
 	if (ec != CXError_Success)
 	{
@@ -112,8 +115,16 @@ void CH2Parser::Visit(const std::string& in, int clang_argc, const char** clang_
 		return;
 	}
 
+	for (int i = 0; i < clang_argc; i++)
+	{
+		if (clang_argv[i][0] == '-' && clang_argv[i][1] == 'D' && clang_argv[i][2] != '\0')
+		{
+			m_defs.emplace_back(clang_argv[i] + 2);
+		}
+	}
+
 	// start visiting
-	auto cursor = clang_getTranslationUnitCursor(unit);
+	auto cursor = clang_getTranslationUnitCursor(m_unit);
 	clang_visitChildren(cursor, [](CXCursor c, CXCursor parent, CXClientData data)
 		-> CXChildVisitResult {
 			return ((CH2Parser*)data)->ParseChild(c, parent);
@@ -427,8 +438,140 @@ BasicMember* CH2Parser::VisitVarDecl(CXCursor c)
 
 BasicMember* CH2Parser::VisitMacroDef(CXCursor c)
 {
-	// TODO
-	return nullptr;
+	auto rt = new Define();
+
+	CXSourceRange range = clang_getCursorExtent(c);
+
+	unsigned int numTokens = 0;
+	CXToken* tokens = nullptr;
+	clang_tokenize(m_unit, range, &tokens, &numTokens);
+
+	ClangStr name(clang_getCursorSpelling(c));
+	rt->m_name = name.Get();
+	bool eval = false;
+
+	for (auto i = 0U; i < numTokens; i++)
+	{
+		if (i == 0)
+			continue; // skip name
+
+		auto kind = clang_getTokenKind(tokens[i]);
+		ClangStr value(clang_getTokenSpelling(m_unit, tokens[i]));
+		std::string value_str = value.Get();
+
+		switch (kind)
+		{
+		case CXToken_Punctuation:
+			if (rt->m_defType == DefineType::Hexadecimal || rt->m_defType == DefineType::Integer || rt->m_defType == DefineType::Octal
+				|| rt->m_defType == DefineType::Binary || rt->m_defType == DefineType::Float)
+			{
+				if (value_str == "+" || value_str == "-" || value_str == "*" || value_str == "/")
+					eval = true;
+			}
+
+			rt->m_value += value_str;
+			break;
+		case CXToken_Identifier:
+		{
+			const auto& ref = FindType(value_str);
+
+			if (!ref || ref->GetTypeID() != MemberType::Define)
+			{
+				rt->m_value += value_str;
+				rt->m_defType = DefineType::Text;
+				continue;
+			}
+			else
+			{
+				const auto& dd = dynamic_cast<Define*>(ref);
+				rt->m_value += dd->GetValue();
+
+				if (rt->m_defType == DefineType::None)
+					rt->m_defType = dd->GetDefineType();
+
+				if (dd->GetDefineType() != rt->m_defType)
+					rt->m_defType = DefineType::Text;
+			}
+			break;
+		}
+		case CXToken_Literal:
+		{
+			// does the token starts with a string literal?
+			if (value_str[0] == '"')
+			{
+				rt->m_defType = DefineType::String;
+
+				const auto e = value_str.find_last_of('"');
+				if (e == std::string::npos)
+				{
+					// invalid string
+					m_lasterr = CH2ErrorCodes::ValueError;
+					clang_disposeTokens(m_unit, tokens, numTokens);
+					delete rt;
+					return nullptr;
+				}
+
+				value_str = value_str.substr(1, e - 1);
+				rt->m_value += value_str;
+			}
+			else if (isdigit(value_str[0]))
+			{
+				// we might have an int literal
+
+				if (value_str[0] == '0' && value_str[1] == 'x')
+				{
+					rt->m_defType = DefineType::Hexadecimal;
+					value_str = value_str.substr(2);
+				}
+				else if (value_str[0] == '0' && value_str[1] == 'b')
+				{
+					rt->m_defType = DefineType::Binary;
+					value_str = value_str.substr(2);
+				}
+				else if (value_str[0] == '0' && value_str.size() > 1)
+				{
+					rt->m_defType = DefineType::Octal;
+					value_str = value_str.substr(1);
+				}
+				else
+					rt->m_defType = DefineType::Integer;
+
+				if (value_str.find(".") != std::string::npos || value_str[value_str.size() - 1] == 'f')
+					rt->m_defType = DefineType::Float;
+
+				size_t m = 0;
+				for (; m < value_str.size(); m++)
+				{
+					if (!isdigit(value_str[m]) && value_str[m] != '.')
+						break;
+				}
+
+				// remove ULL and similar marks
+				value_str = value_str.substr(0, m);
+
+				rt->m_value += value_str;
+			}
+			else if (rt->m_defType == DefineType::None)
+			{
+				clang_disposeTokens(m_unit, tokens, numTokens);
+				delete rt;
+				return nullptr;
+			}
+			break;
+		}
+		default:
+			clang_disposeTokens(m_unit, tokens, numTokens);
+			delete rt;
+			return nullptr;
+		}
+	}
+
+	clang_disposeTokens(m_unit, tokens, numTokens);
+
+	if (eval)
+		EvalDefine(rt);
+
+	return rt;
 }
 
 CXChildVisitResult CH2Parser::ParseChild(CXCursor cursor, CXCursor parent)
@@ -463,13 +606,38 @@ CXChildVisitResult CH2Parser::ParseChild(CXCursor cursor, CXCursor parent)
 		break;
 
 	case CXCursor_MacroDefinition:
-		//if (clang_Cursor_isMacroBuiltin(cursor) || clang_Cursor_isMacroFunctionLike(cursor))
-			skip = true; // skip macros that we cannot parse
-		//else
-		//	member = VisitMacroDef(cursor);
+	{
+		skip = true;
+		// skip builtin macros and function-like macros
+		if (clang_Cursor_isMacroBuiltin(cursor) == 0 && clang_Cursor_isMacroFunctionLike(cursor) == 0)
+		{
+			// do not parse builin macros ereditated by system headers
+			const auto& locationSource = clang_getCursorLocation(cursor);
+			if (clang_Location_isInSystemHeader(locationSource) <= 0)
+			{
+				skip = false;
+				// skip macros passed by the cli
+				ClangStr name(clang_getCursorSpelling(cursor));
+
+				for (const auto& def : m_defs)
+				{
+					if (def == name.Get())
+					{
+						skip = true;
+						break;
+					}
+				}
+			}
+		}
+
+		if (!skip)
+			member = VisitMacroDef(cursor);
+
+		if (!member)
+			return CXChildVisit_Recurse; // skip unsupported macros
 
 		break;
-
+	}
 	case CXCursor_FunctionDecl:
 		member = VisitFunc(cursor);
 		break;
@@ -583,4 +751,28 @@ void CH2Parser::FixupDecls()
 	{
 		m_cf->m_types.emplace_back(m);
 	}
+}
+
+void CH2Parser::EvalDefine(Define* def)
+{
+	exprtk::expression<double> expression;
+	exprtk::parser<double> parser;
+
+	if (!parser.compile(def->GetValue(), expression))
+	{
+		m_lasterr = CH2ErrorCodes::EvalError;
+		return;
+	}
+
+	auto res = expression.value();
+
+	std::stringstream stream;
+	
+	if (def->GetDefineType() == DefineType::Float)
+		stream << res;
+	else
+		stream << std::hex << uint32_t(res);
+
+	def->m_defType = DefineType::Hexadecimal;
+	def->m_value = stream.str();
 }

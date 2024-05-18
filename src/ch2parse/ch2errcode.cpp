@@ -31,6 +31,10 @@ const char* CH2ErrorCodeStr(CH2ErrorCodes err)
 		return "Wrong parent type";
 	case CH2ErrorCodes::BadCallType:
 		return "Wrong call type";
+	case CH2ErrorCodes::EvalError:
+		return "Evalutation error";
+	case CH2ErrorCodes::ValueError:
+		return "Value error";
 	}
 
 	return "Unknown";

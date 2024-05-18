@@ -9,7 +9,6 @@
 #include <writerhelp.hpp>
 #include <stack>
 
-
 void MasmDriver::CopyName(std::string& dst, const LinkType& link)
 {
 	for (long long i = 0; i < link.pointers; i++)
@@ -77,7 +76,7 @@ void MasmDriver::WriteType(const LinkType& ref, const std::string_view& field_na
 		}
 	}
 
-	writefmt(m_fp, "{}\t\t{}\t\t{}\n", field_name, typeName, usetags ? "<>" : "?");
+	writefmt(m_cfg.fp, "{}\t\t{}\t\t{}\n", field_name, typeName, usetags ? "<>" : "?");
 
 }
 
@@ -134,7 +133,7 @@ void MasmDriver::WriteStructMembers(const Struct& stru)
 			}
 
 			// rec@x_0   RECORD
-			writefmt(m_fp, "rec@{}_{}\t\tRECORD\t", structname, totalprct);
+			writefmt(m_cfg.fp, "rec@{}_{}\t\tRECORD\t", structname, totalprct);
 
 			bool writeretn = false;
 
@@ -143,7 +142,7 @@ void MasmDriver::WriteStructMembers(const Struct& stru)
 				// this adds the missing padding
 
 				// @0@x:5
-				writefmt(m_fp, "@0@{}:{}", structname, PrimitiveGetBitSize(prim) - processed);
+				writefmt(m_cfg.fp, "@0@{}:{}", structname, PrimitiveGetBitSize(prim) - processed);
 				writeretn = true;
 			}
 
@@ -152,17 +151,17 @@ void MasmDriver::WriteStructMembers(const Struct& stru)
 				if (!writeretn)
 					writeretn = true;
 				else
-					writefmt(m_fp, ",\n\t\t\t\t");
+					writefmt(m_cfg.fp, ",\n\t\t\t\t");
 
 					// p@x:3
 				const auto top = m_bitstack.top();
-				writefmt(m_fp, "{}@{}:{}", top->GetName(), structname, top->GetSize());
+				writefmt(m_cfg.fp, "{}@{}:{}", top->GetName(), structname, top->GetSize());
 
 				m_bitstack.pop();
 			}
 
 			// @bit_0  rec@x_0 <>
-			writefmt(m_fp, "\n"
+			writefmt(m_cfg.fp, "\n"
 							"@bit_{}\t\trec@{}_{} <>\n", totalprct, structname, totalprct);
 
 			totalprct++;
@@ -197,7 +196,7 @@ void MasmDriver::PreprocessType(const LinkType& link)
 			fullname = fullname.erase(p, 7);
 		}
 
-		writefmt(m_fp, "@t_{}\t\tTYPEDEF\t\t{}\n", m_total_preprocess_typedef, fullname);
+		writefmt(m_cfg.fp, "@t_{}\t\tTYPEDEF\t\t{}\n", m_total_preprocess_typedef, fullname);
 		m_total_preprocess_typedef++;
 	}
 }
@@ -212,7 +211,7 @@ void MasmDriver::PreprocessStruct(const Struct& stru)
 
 void MasmDriver::WriteFileStart(void)
 {
-	writefmt(m_fp,
+	writefmt(m_cfg.fp,
 		"\n"
 		"option expr32\n"
 		"option casemap:none\n"
@@ -223,22 +222,22 @@ void MasmDriver::WriteFileStart(void)
 
 void MasmDriver::WriteFileEnd(void)
 {
-	writefmt(m_fp, "; End of the file\n");
+	writefmt(m_cfg.fp, "; End of the file\n");
 }
 
 void MasmDriver::WriteSingleComment(const std::string& comment)
 {
-	writefmt(m_fp, "; {}\n", comment);
+	writefmt(m_cfg.fp, "; {}\n", comment);
 }
 
 void MasmDriver::WriteMultiComment(const std::vector<std::string>& v)
 {
-	writefmt(m_fp, "COMMENT @$?\n\n");
+	writefmt(m_cfg.fp, "COMMENT @$?\n\n");
 	for (const auto& comment : v)
 	{
-		writefmt(m_fp, comment);
+		writefmt(m_cfg.fp, comment);
 	}
-	writefmt(m_fp, "\n@$?\n");
+	writefmt(m_cfg.fp, "\n@$?\n");
 }
 
 void MasmDriver::WriteTypeDef(const Typedef& type)
@@ -246,7 +245,7 @@ void MasmDriver::WriteTypeDef(const Typedef& type)
 	std::string typeName = "";
 	CopyName(typeName, type.GetRef());
 
-	writefmt(m_fp, "{}\t\tTYPEDEF\t\t{}\n\n", type.GetName(), typeName);
+	writefmt(m_cfg.fp, "{}\t\tTYPEDEF\t\t{}\n\n", type.GetName(), typeName);
 }
 
 void MasmDriver::WriteStruct(const Struct& stru)
@@ -261,25 +260,25 @@ void MasmDriver::WriteStruct(const Struct& stru)
 	}
 
 	// we need to remove "struct " part of the name, that's why there's + 7
-	writefmt(m_fp, "{}\t\tSTRUCT {}t\n", name, stru.GetAlign() / 8);
+	writefmt(m_cfg.fp, "{}\t\tSTRUCT {}t\n", name, stru.GetAlign() / 8);
 	WriteStructMembers(stru);
-	writefmt(m_fp, "{}\t\tENDS\n\n", name);
+	writefmt(m_cfg.fp, "{}\t\tENDS\n\n", name);
 }
 
 void MasmDriver::WriteUnion(const Union& fnc)
 {
 	const std::string_view name = fnc.GetName().c_str() + 6;
 	PreprocessStruct(dynamic_cast<const Struct&>(fnc));
-	writefmt(m_fp, "{}\t\tUNION\n", name);
+	writefmt(m_cfg.fp, "{}\t\tUNION\n", name);
 	WriteStructMembers(dynamic_cast<const Struct&>(fnc));
-	writefmt(m_fp, "{}\t\tENDS\n\n", name);
+	writefmt(m_cfg.fp, "{}\t\tENDS\n\n", name);
 }
 
 void MasmDriver::WriteEnum(const Enum& fnc)
 {
 	for (const auto& p : fnc.GetFields())
 	{
-		writefmt(m_fp, "{}\t\tEQU\t\t{}t\n", p->GetName(), p->GetValue());
+		writefmt(m_cfg.fp, "{}\t\tEQU\t\t{}t\n", p->GetName(), p->GetValue());
 	}
 }
 
@@ -288,21 +287,24 @@ void MasmDriver::WriteFunction(const Function& fnc)
 	std::string_view callType;
 	int isfirst = 1;
 
-	if (m_platform.GetBits() != 64) // MASM x64 does not use C/PASCAL
+	if (m_cfg.platform.GetBits() != 64) // MASM x64 does not use C/PASCAL
 	{
 		const auto callTypeC = get_calling_string(fnc.GetCallType());
 		if (!callTypeC)
 		{
 			// MASM unsupported types
 			callType = CallType2Str(fnc.GetCallType());
-			writefmt(m_fp, "; function {} ignored as it uses an unsupported call type ({})\n\n", fnc.GetName(), callType);
+
+			if (m_cfg.verbose)
+				writefmt(m_cfg.fp, "; function {} ignored as it uses an unsupported call type ({})\n\n", fnc.GetName(), callType);
+	
 			return;
 		}
 		else
 			callType = callTypeC;
 	}
 
-	writefmt(m_fp, "@proto_{}\t\tTYPEDEF\t\tPROTO {} ", m_total_protos, callType);
+	writefmt(m_cfg.fp, "@proto_{}\t\tTYPEDEF\t\tPROTO {} ", m_total_protos, callType);
 
 	// MASM does not write the return type so we skip that
 
@@ -313,22 +315,59 @@ void MasmDriver::WriteFunction(const Function& fnc)
 		if (isfirst)
 			isfirst = 0;
 		else
-			writefmt(m_fp, ", ");
+			writefmt(m_cfg.fp, ", ");
 
 		CopyName(type, arg.ref);
-		writefmt(m_fp, ":{}", type);
+		writefmt(m_cfg.fp, ":{}", type);
 	}
 
 	if (fnc.IsVariadic())
-		writefmt(m_fp, ", :VARARG");
+		writefmt(m_cfg.fp, ", :VARARG");
 
-	writefmt(m_fp, "\n{}\t\tPROTO\t\t@proto_{}\n\n", fnc.GetName(), m_total_protos);
+	writefmt(m_cfg.fp, "\n{}\t\tPROTO\t\t@proto_{}\n\n", fnc.GetName(), m_total_protos);
 	m_total_protos++;
 }
 
 void MasmDriver::WriteDefine(const Define& def)
 {
-	// TODO
+	const auto& deftype = def.GetDefineType();
+
+	std::string postfix = "";
+	std::string prefix = "";
+	std::string cmd = "EQU";
+
+	switch (deftype)
+	{
+	case DefineType::None:
+	case DefineType::Float:
+	case DefineType::Binary:
+	//case DefineType::String:
+		if (m_cfg.verbose)
+			writefmt(m_cfg.fp, "; Unsupported macro {}\n", def.GetName());
+	
+		return;
+
+	case DefineType::String:
+	case DefineType::Text:
+		prefix = "<";
+		postfix = ">";
+		cmd = "TEXTEQU";
+		break;
+
+	case DefineType::Integer:
+		postfix = "t";
+		break;
+
+	case DefineType::Hexadecimal:
+		postfix = "h";
+		break;
+
+	case DefineType::Octal:
+		postfix = "o";
+		break;
+	}
+
+	writefmt(m_cfg.fp, "{}\t\t{}\t\t{}{}{}\n", def.GetName(), cmd, prefix, def.GetValue(), postfix);
 }
 
 void MasmDriver::WriteGlobalVar(const GlobalVar& def)
@@ -338,13 +377,13 @@ void MasmDriver::WriteGlobalVar(const GlobalVar& def)
 		if (!m_data_written)
 		{
 			// writes .DATA if we find static variables
-			writefmt(m_fp, "\n.DATA\n\n");
+			writefmt(m_cfg.fp, "\n.DATA\n\n");
 			m_data_written = true;
 		}
 
 		PreprocessType(def.GetRef());
 		WriteType(def.GetRef(), def.GetName());
-		writefmt(m_fp, "\n");
+		writefmt(m_cfg.fp, "\n");
 	}
 	else
 	{
@@ -352,7 +391,7 @@ void MasmDriver::WriteGlobalVar(const GlobalVar& def)
 
 		std::string name = "";
 		CopyName(name, def.GetRef());
-		writefmt(m_fp, "EXTERNDEF\t\tC\t{}:{}\n\n", def.GetName(), name);
+		writefmt(m_cfg.fp, "EXTERNDEF\t\tC\t{}:{}\n\n", def.GetName(), name);
 	}
 }
 

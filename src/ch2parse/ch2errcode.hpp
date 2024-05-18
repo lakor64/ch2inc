@@ -56,6 +56,14 @@ enum class CH2ErrorCodes
 	* Invalid calling convention
 	*/
 	BadCallType,
+	/**
+	* Evalutation error
+	*/
+	EvalError,
+	/**
+	* Value error
+	*/
+	ValueError,
 };
 
 /**

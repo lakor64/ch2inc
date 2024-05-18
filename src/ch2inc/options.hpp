@@ -19,7 +19,7 @@ struct Options
 	/**
 	* Default constructor
 	*/
-	explicit Options() : info(), nologo(false), msvc(false) {}
+	explicit Options() : info(), nologo(false), msvc(false), verbose(false) {}
 
 	/** Platform info */
 	PlatformInfo info;
@@ -39,6 +39,8 @@ struct Options
 	bool nologo;
 	/** Run in MSVC compatibility mode */
 	bool msvc;
+	/** Verbose logging */
+	bool verbose;
 #ifndef DISABLE_DYNLIB
 	/** Driver name */
 	std::string driver;

@@ -7,8 +7,13 @@ if (NOT DEFINED LLVM_ROOT)
     message(FATAL_ERROR "Variable LLVM_ROOT not set")
 endif()
 
+if (MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+endif()
+
 find_package(cxxopts CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
+find_path(EXPRTK_INCLUDE_DIRS "exprtk.hpp")
 
 set(LIBCLANG_NAME "clang")
 

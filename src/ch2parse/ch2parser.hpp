@@ -9,6 +9,7 @@
 #include "ch2errcode.hpp"
 #include "cfile.hpp"
 #include "linktype.hpp"
+#include "define.hpp"
 
 #include <clang-c/Index.h>
 
@@ -162,6 +163,12 @@ private:
 	void FixupDecls();
 
 	/**
+	* Evalutates a define and computes it's value
+	* @param def Define to valutate
+	*/
+	void EvalDefine(Define* def);
+
+	/**
 	* Last error
 	*/
 	CH2ErrorCodes m_lasterr;
@@ -175,4 +182,14 @@ private:
 	* key-value reference of all the types
 	*/
 	std::unordered_map<std::string, BasicMember*> m_types;
+
+	/**
+	* Store each command line define argument
+	*/
+	std::vector<std::string> m_defs;
+
+	/**
+	* clang translation unit
+	*/
+	CXTranslationUnit m_unit;
 };
