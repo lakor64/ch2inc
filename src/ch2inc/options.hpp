@@ -41,6 +41,8 @@ struct Options
 	bool msvc;
 	/** Verbose logging */
 	bool verbose;
+	/** Write macros like h2inc */
+	bool macro_like_h2inc;
 #ifndef DISABLE_DYNLIB
 	/** Driver name */
 	std::string driver;

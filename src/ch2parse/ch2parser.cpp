@@ -163,6 +163,14 @@ bool CH2Parser::SetupLink(CXType type, LinkType& ref)
 	ClangStr baseTypeStr(clang_getTypeSpelling(baseType));
 	std::string baseTypeName = baseTypeStr.Get();
 
+	if (baseType.kind == CXType_Record)
+	{
+		if (baseTypeName.find("union ") != std::string::npos)
+			baseTypeName = baseTypeName.substr(6);
+		if (baseTypeName.find("struct ") != std::string::npos)
+			baseTypeName = baseTypeName.substr(7);
+	}
+
 	if (clang_isConstQualifiedType(baseType)) // remove "const " from name
 	{
 		const auto p = baseTypeName.find("const");
@@ -219,6 +227,10 @@ bool CH2Parser::SetupVariable(Variable& v, CXType type, CXCursor c)
 	{
 		type = clang_getArrayElementType(type);
 		v.m_array.emplace_back(-1); // this is for incomplete array
+	}
+	else if (type.kind == CXType_Elaborated)
+	{
+		type = clang_Type_getNamedType(type);
 	}
 
 	if (!SetupLink(type, v.m_ref))

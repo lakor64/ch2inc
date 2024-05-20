@@ -36,6 +36,7 @@ CH2Inc::CH2Inc()
 		("input", "The input file to process", cxxopts::value<std::string>())
 		("output", "The output file to result", cxxopts::value<std::string>())
 		("verbose", "Enable verbose logging")
+		("only-int-macros", "Ignore all macros except the integer ones (this emulates the behavour of H2INC)")
 		;
 
 	m_opt.parse_positional({ "input", "output" });
@@ -105,6 +106,9 @@ int CH2Inc::ParseCli(int argc, char** argv)
 
 	if (res.count("msvc"))
 		m_sopts.msvc = true;
+
+	if (res.count("only-int-macros"))
+		m_sopts.macro_like_h2inc = true;
 
 	auto platformBits = res["platform-bitsize"].as<unsigned int>();
 	auto platformName = res["platform"].as<std::string>();
@@ -399,8 +403,19 @@ int CH2Inc::Run(int argc, char** argv)
 			m_drvfnc->WriteEnum(*dynamic_cast<const Enum*>(type));
 			break;
 		case MemberType::Define:
-			m_drvfnc->WriteDefine(*dynamic_cast<const Define*>(type));
+		{
+			const auto& def = *dynamic_cast<const Define*>(type);
+
+			if (m_sopts.macro_like_h2inc)
+			{
+				if (def.GetDefineType() != DefineType::Integer 
+					&& def.GetDefineType() != DefineType::Hexadecimal
+					&& def.GetDefineType() != DefineType::Octal)
+					continue;
+			}
+			m_drvfnc->WriteDefine(def);
 			break;
+		}
 		case MemberType::GlobalVar:
 			m_drvfnc->WriteGlobalVar(*dynamic_cast<const GlobalVar*>(type));
 			break;

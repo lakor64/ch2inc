@@ -23,7 +23,7 @@ public:
 	/**
 	* Default constructor
 	*/
-	explicit Function() : BasicMember(MemberType::Function), m_calltype(CallType::Invalid), m_variadic(false), m_ret(), m_storage(StorageType::None) {}
+	explicit Function() : BasicMember(MemberType::Function), m_calltype(CallType::Invalid), m_variadic(false), m_ret(), m_storage(StorageType::None), m_pointers(-1) {}
 
 	/**
 	* Gets the calling convention of this function
@@ -61,6 +61,12 @@ public:
 	*/
 	constexpr auto& IsTypedef() const { return m_typedef; }
 
+	/**
+	* Gets the number of typedef pointers in the function
+	* @return true if it have pointers, otherwise false
+	*/
+	constexpr auto GetPointers() const { return m_pointers; }
+
 private:
 	/**
 	* type of the function call
@@ -90,4 +96,9 @@ private:
 	* If the function is a typedef prototype
 	*/
 	bool m_typedef;
+
+	/**
+	* Pointers size
+	*/
+	int m_pointers;
 };

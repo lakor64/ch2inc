@@ -27,27 +27,16 @@ void MasmDriver::CopyName(std::string& dst, const LinkType& link)
 		if (link.ref_type->GetName() != "*") // do not write the pointer name if it's flagged as such
 			dst += get_primitive_name(*dynamic_cast<Primitive*>(link.ref_type));
 	}
-	else if (link.ref_type->GetTypeID() == MemberType::Union)
+	else if (link.ref_type->GetTypeID() == MemberType::Union ||
+		link.ref_type->GetTypeID() == MemberType::Struct
+		)
 	{
-		const std::string n = link.ref_type->GetName().c_str() + 6; // remove "union "
+		const std::string n = link.ref_type->GetName();
 		for (size_t k = 0; k < m_tag_link.size(); k++)
 		{
 			if (m_tag_link[k] == n)
 			{
 				dst += "@tag_ " + std::to_string(k);
-				return;
-			}
-		}
-		dst += n;
-	}
-	else if (link.ref_type->GetTypeID() == MemberType::Struct)
-	{
-		const std::string n = link.ref_type->GetName().c_str() + 7; // remove "struct "
-		for (size_t k = 0; k < m_tag_link.size(); k++)
-		{
-			if (m_tag_link[k] == n)
-			{
-				dst += "@tag_" + std::to_string(k);
 				return;
 			}
 		}
@@ -97,6 +86,7 @@ void MasmDriver::WriteVariable(const Variable& v)
 		{
 			writefmt(m_cfg.fp, ")");
 		}
+		writefmt(m_cfg.fp, "\n");
 	}
 	else
 	{
@@ -128,7 +118,7 @@ void MasmDriver::WriteStructMembers(const Struct& stru)
 				- iterare trough all of our stack and write data from last to begin
 			*/
 
-			const std::string_view structname = stru.GetName().c_str() + 7;
+			const std::string_view structname = stru.GetName();
 			std::stack<StructField*> m_bitstack;
 			auto prim = dynamic_cast<const Primitive*>(field->GetRef().ref_type)->GetType();
 			int64_t processed = field->GetSize();
@@ -214,17 +204,6 @@ void MasmDriver::PreprocessType(const LinkType& link)
 		else
 			fullname = fullname.erase(fullname.size() - 2);
 
-		if (link.ref_type->GetTypeID() == MemberType::Union)
-		{
-			const auto p = fullname.find("union ");
-			fullname = fullname.erase(p, 6);
-		}
-		else if (link.ref_type->GetTypeID() == MemberType::Struct)
-		{
-			const auto p = fullname.find("struct ");
-			fullname = fullname.erase(p, 7);
-		}
-
 		writefmt(m_cfg.fp, "@t_{}\t\tTYPEDEF\t\t{}\n", m_total_preprocess_typedef, fullname);
 		m_total_preprocess_typedef++;
 	}
@@ -280,7 +259,7 @@ void MasmDriver::WriteTypeDef(const Typedef& type)
 void MasmDriver::WriteStruct(const Struct& stru)
 {
 	PreprocessStruct(stru);
-	std::string name = stru.GetName().c_str() + 7;
+	std::string name = stru.GetName();
 
 	if (stru.IsUnnamed())
 	{
@@ -288,7 +267,6 @@ void MasmDriver::WriteStruct(const Struct& stru)
 		name = "@tag_" + std::to_string(m_tag_link.size() - 1);		
 	}
 
-	// we need to remove "struct " part of the name, that's why there's + 7
 	writefmt(m_cfg.fp, "{}\t\tSTRUCT {}t\n", name, stru.GetAlign() / 8);
 	WriteStructMembers(stru);
 	writefmt(m_cfg.fp, "{}\t\tENDS\n\n", name);
@@ -296,7 +274,7 @@ void MasmDriver::WriteStruct(const Struct& stru)
 
 void MasmDriver::WriteUnion(const Union& fnc)
 {
-	const std::string_view name = fnc.GetName().c_str() + 6;
+	const std::string_view name = fnc.GetName();
 	PreprocessStruct(dynamic_cast<const Struct&>(fnc));
 	writefmt(m_cfg.fp, "{}\t\tUNION\n", name);
 	WriteStructMembers(dynamic_cast<const Struct&>(fnc));
@@ -353,7 +331,17 @@ void MasmDriver::WriteFunction(const Function& fnc)
 	if (fnc.IsVariadic())
 		writefmt(m_cfg.fp, ", :VARARG");
 
-	writefmt(m_cfg.fp, "\n{}\t\t{}\t\t@proto_{}\n\n", fnc.GetName(), fnc.IsTypedef() ? "TYPEDEF PTR" : "PROTO", m_total_protos);
+	std::string protoType = "PROTO";
+
+	if (fnc.IsTypedef())
+	{
+		protoType = "TYPEDEF";
+
+		for (int i = 0; i < fnc.GetPointers(); i++)
+			protoType += " PTR";
+	}
+
+	writefmt(m_cfg.fp, "\n{}\t\t{}\t\t@proto_{}\n\n", fnc.GetName(), protoType, m_total_protos);
 	m_total_protos++;
 }
 

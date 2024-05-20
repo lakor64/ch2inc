@@ -25,7 +25,13 @@ BasicMember* CH2Parser::VisitStructOrUnion(CXCursor c, bool isUnion)
 	const auto type = clang_getCursorType(c);
 	ClangStr name(clang_getTypeSpelling(type));
 
-	rt->m_name = name.Get();
+	// we have to remove struct/union type like C++ or h2inc references would cry
+
+	if (isUnion)
+		rt->m_name = name.Get() + 6;
+	else
+		rt->m_name = name.Get() + 7;
+
 	rt->m_size = clang_Type_getSizeOf(type) * 8;
 	rt->m_align = clang_Type_getAlignOf(type) * 8;
 
@@ -45,7 +51,17 @@ BasicMember* CH2Parser::VisitField(CXCursor c, CXCursor p)
 		type = clang_Type_getNamedType(type);
 
 	const auto parent_type = clang_getCursorType(p);
-	auto parent = FindType(p);
+
+	ClangStr name(clang_getTypeSpelling(parent_type));
+	std::string parent_name = name.Get();
+
+	// we remove union/parent name
+	if (parent_name.find("union ") != std::string::npos)
+		parent_name = parent_name.substr(6);
+	if (parent_name.find("struct ") != std::string::npos)
+		parent_name = parent_name.substr(7);
+		
+	auto parent = FindType(parent_name);
 
 	if (!parent)
 	{
@@ -93,14 +109,23 @@ BasicMember* CH2Parser::VisitTypedef(CXCursor c)
 {
 	auto undertype = clang_getTypedefDeclUnderlyingType(c);
 	const auto type = clang_getCursorType(c);
+	int ptrs = 0;
 
-	if (undertype.kind == CXType_Pointer)
+	while (undertype.kind == CXType_Pointer)
+	{
+		ptrs++;
 		undertype = clang_getPointeeType(undertype);
+	}
 
 	if (undertype.kind == CXType_FunctionProto)
 	{
 		// libclang is trying to find a function proto for something that prolly doesn't exist
-		return VisitFunc(c, undertype, true);
+		auto m = VisitFunc(c, undertype, true);
+		if (!m)
+			return nullptr;
+
+		m->m_pointers = ptrs;
+		return m;
 	}
 	
 	// that part is done to resolve function proto, we need to reset
@@ -173,7 +198,7 @@ BasicMember* CH2Parser::VisitFunc(CXCursor c)
 	return VisitFunc(c, clang_getCursorType(c), false);
 }
 
-BasicMember* CH2Parser::VisitFunc(CXCursor c, CXType type, bool isTypedef)
+Function* CH2Parser::VisitFunc(CXCursor c, CXType type, bool isTypedef)
 {
 	ClangStr name(clang_getCursorSpelling(c));
 	auto rt = new Function();

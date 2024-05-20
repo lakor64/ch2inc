@@ -10,6 +10,7 @@
 #include "cfile.hpp"
 #include "linktype.hpp"
 #include "define.hpp"
+#include "function.hpp"
 #include "variable.hpp"
 
 #include <clang-c/Index.h>
@@ -186,7 +187,7 @@ private:
 	* @note THIS FUNCTION IS USED FOR FUNCTION PROTOTYPES (typedef function) AS WELL
 	* @return Function pointer or null in case of error
 	*/
-	BasicMember* VisitFunc(CXCursor c, CXType type, bool isTypedef);
+	Function* VisitFunc(CXCursor c, CXType type, bool isTypedef);
 
 	/**
 	* Last error
