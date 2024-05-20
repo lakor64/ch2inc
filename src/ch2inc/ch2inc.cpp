@@ -288,17 +288,20 @@ bool CH2Inc::SetupDriver()
 		dynlib_free(m_drv);
 		return false;
 	}
+#endif
 
 	m_drvfnc = m_drvep();
 
 	if (!m_drvfnc)
 	{
+#ifndef DISABLE_DYNLIB
 		dynlib_free(m_drv);
+#endif
 		return false;
 	}
 
 	return true;
-#endif
+
 }
 
 int CH2Inc::Run(int argc, char** argv)
