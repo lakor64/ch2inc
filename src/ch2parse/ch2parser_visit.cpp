@@ -92,6 +92,10 @@ BasicMember* CH2Parser::VisitField(CXCursor c, CXCursor p)
 BasicMember* CH2Parser::VisitTypedef(CXCursor c)
 {
 	auto undertype = clang_getTypedefDeclUnderlyingType(c);
+	const auto type = clang_getCursorType(c);
+
+	if (undertype.kind == CXType_Pointer)
+		undertype = clang_getPointeeType(undertype);
 
 	if (undertype.kind == CXType_FunctionProto)
 	{
@@ -100,7 +104,6 @@ BasicMember* CH2Parser::VisitTypedef(CXCursor c)
 	}
 
 	auto rt = new Typedef();
-	const auto type = clang_getCursorType(c);
 
 	if (!SetupVariable(*rt, type, c))
 	{

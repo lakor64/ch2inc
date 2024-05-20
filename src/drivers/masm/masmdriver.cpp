@@ -324,7 +324,7 @@ void MasmDriver::WriteFunction(const Function& fnc)
 	if (fnc.IsVariadic())
 		writefmt(m_cfg.fp, ", :VARARG");
 
-	writefmt(m_cfg.fp, "\n{}\t\tPROTO\t\t@proto_{}\n\n", fnc.GetName(), m_total_protos);
+	writefmt(m_cfg.fp, "\n{}\t\t{}\t\t@proto_{}\n\n", fnc.GetName(), fnc.IsTypedef() ? "TYPEDEF PTR" : "PROTO", m_total_protos);
 	m_total_protos++;
 }
 
