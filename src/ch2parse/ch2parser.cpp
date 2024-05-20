@@ -110,7 +110,12 @@ void CH2Parser::Visit(const std::string& in, int clang_argc, const char** clang_
 	{
 		if (clang_argv[i][0] == '-' && clang_argv[i][1] == 'D' && clang_argv[i][2] != '\0')
 		{
-			m_defs.emplace_back(clang_argv[i] + 2);
+			std::string def = clang_argv[i] + 2;
+			size_t eqpos = def.find("=");
+			if (eqpos == std::string::npos)
+				eqpos = def.size();
+
+			m_defs.emplace_back(def.substr(0, eqpos));
 		}
 	}
 
@@ -193,16 +198,16 @@ BasicMember* CH2Parser::FindType(CXCursor c)
 
 bool CH2Parser::SetupVariable(Variable& v, CXType type, CXCursor c)
 {
-	if (!SetupLink(type, v.m_ref))
-	{
-		return false;
-	}
-
 	if (c.kind != CXType_Invalid && c.kind != CXCursor_FirstInvalid && c.kind != CXCursor_LastInvalid)
 	{
 		// we only care about argument names in a function not a typedef
 		ClangStr argumentName(clang_getCursorSpelling(c));
 		v.m_name = argumentName.Get();
+	}
+
+	if (!SetupLink(type, v.m_ref))
+	{
+		return false;
 	}
 
 	v.m_restrict = clang_isRestrictQualifiedType(type);
