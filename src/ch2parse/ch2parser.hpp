@@ -10,6 +10,7 @@
 #include "cfile.hpp"
 #include "linktype.hpp"
 #include "define.hpp"
+#include "variable.hpp"
 
 #include <clang-c/Index.h>
 
@@ -23,7 +24,7 @@ public:
 	/**
 	* Default constructor
 	*/
-	explicit CH2Parser() : m_lasterr(CH2ErrorCodes::None), m_cf(nullptr) {}
+	explicit CH2Parser() : m_lasterr(CH2ErrorCodes::None), m_cf(nullptr), m_unit(nullptr) {}
 
 	/**
 	* Default deconstructor
@@ -114,6 +115,15 @@ private:
 	BasicMember* VisitFunc(CXCursor c);
 
 	/**
+	* Sets up a Variable
+	* @param v variable reference
+	* @param type Variable type
+	* @param c Cursor (or invalid)
+	* @return true if the setup is correct, otherwise false
+	*/
+	bool SetupVariable(Variable& v, CXType type, CXCursor c = { CXCursor_FirstInvalid, 0, nullptr } );
+
+	/**
 	* Sets up a Link reference class
 	* @param type Type to setup
 	* @param ref Output link type
@@ -167,6 +177,16 @@ private:
 	* @param def Define to valutate
 	*/
 	void EvalDefine(Define* def);
+
+	/**
+	* Visits a function
+	* @param c Cursor
+	* @param type Function type
+	* @param isTypedef True if the function is a typedef
+	* @note THIS FUNCTION IS USED FOR FUNCTION PROTOTYPES (typedef function) AS WELL
+	* @return Function pointer or null in case of error
+	*/
+	BasicMember* VisitFunc(CXCursor c, CXType type, bool isTypedef);
 
 	/**
 	* Last error

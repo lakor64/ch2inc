@@ -6,8 +6,7 @@
 */
 #pragma once
 
-#include "linktype.hpp"
-#include "basicmember.hpp"
+#include "variable.hpp"
 #include <vector>
 
 class Struct;
@@ -15,26 +14,14 @@ class Struct;
 /**
 * A C structure/union field
 */
-class StructField final : public BasicMember
+class StructField final : public Variable
 {
 	friend CH2Parser;
 public:
 	/**
 	* Default constructor
 	*/
-	explicit StructField() : BasicMember(MemberType::StructField), m_size(0), m_ref(), m_parent(nullptr) {}
-
-	/**
-	* Gets the size of this field in bits
-	* @return Size of the field in bits
-	*/
-	constexpr auto GetSize() const { return m_size; }
-
-	/**
-	* Gets the type reference of this field
-	* @return Reference of this type
-	*/
-	constexpr auto& GetRef() const { return m_ref; }
+	explicit StructField() : Variable(), m_parent(nullptr) { m_type = MemberType::StructField; }
 
 	/**
 	* Gets the parent of this field
@@ -43,10 +30,6 @@ public:
 	constexpr const Struct* GetParent() const { return m_parent; }
 
 private:
-	/** size of the field in bits */
-	int64_t m_size;
-	/** type reference */
-	LinkType m_ref;
 	/** parent of this field */
 	Struct* m_parent;
 };

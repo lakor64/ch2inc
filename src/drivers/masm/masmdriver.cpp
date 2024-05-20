@@ -317,7 +317,7 @@ void MasmDriver::WriteFunction(const Function& fnc)
 		else
 			writefmt(m_cfg.fp, ", ");
 
-		CopyName(type, arg.ref);
+		CopyName(type, arg.GetRef());
 		writefmt(m_cfg.fp, ":{}", type);
 	}
 

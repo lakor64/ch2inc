@@ -9,25 +9,9 @@
 #include "calltype.hpp"
 #include "linktype.hpp"
 #include "storagetype.hpp"
+#include "variable.hpp"
 #include <string>
 #include <vector>
-
-/**
-* Data in the function, either an argument or return type
-*/
-struct FuncData
-{
-	explicit FuncData() : ref(), volatil(false), restric(false) {}
-
-	/** reference type */
-	LinkType ref;
-	/** name info */
-	std::string name;
-	/** if it's volatile */
-	bool volatil;
-	/** if it's restrict */
-	bool restric;
-};
 
 /**
 * A C function declaration
@@ -71,6 +55,12 @@ public:
 	*/
 	constexpr StorageType GetStorageType() const { return m_storage; }
 
+	/**
+	* Checks if the function is a typedef
+	* @return true if it's a typedef not a real function, otherwise false
+	*/
+	constexpr auto& IsTypedef() const { return m_typedef; }
+
 private:
 	/**
 	* type of the function call
@@ -85,14 +75,19 @@ private:
 	* return type of a function
 	* @note if the ref_type is nullptr then the return type is "void"
 	*/
-	FuncData m_ret;
+	Variable m_ret;
 	/**
 	* list of all arguments of the function
 	*/
-	std::vector<FuncData> m_arguments;
+	std::vector<Variable> m_arguments;
 
 	/**
 	* Type of storage
 	*/
 	StorageType m_storage;
+
+	/**
+	* If the function is a typedef prototype
+	*/
+	bool m_typedef;
 };
