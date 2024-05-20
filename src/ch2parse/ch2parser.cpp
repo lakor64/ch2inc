@@ -143,7 +143,45 @@ BasicMember* CH2Parser::FindType(const std::string& name)
 	return it->second;
 }
 
-bool CH2Parser::SetupLink(CXType type, LinkType& ref)
+void CH2Parser::RemoveCPrefix(std::string& typeName)
+{
+	if (typeName.find("union ") != std::string::npos)
+		typeName = typeName.substr(6);
+	if (typeName.find("struct ") != std::string::npos)
+		typeName = typeName.substr(7);
+	if (typeName.find("enum ") != std::string::npos)
+		typeName = typeName.substr(5);
+}
+
+std::string CH2Parser::GetNormalizedName(CXType type)
+{
+
+	ClangStr baseTypeStr(clang_getTypeSpelling(type));
+	std::string baseTypeName = baseTypeStr.Get();
+
+	RemoveCPrefix(baseTypeName);
+	if (clang_isConstQualifiedType(type)) // remove "const " from name
+	{
+		const auto p = baseTypeName.find("const");
+		baseTypeName = baseTypeName.substr(p + 6);
+	}
+
+	if (clang_isVolatileQualifiedType(type)) // remove "volatile " from name
+	{
+		const auto p = baseTypeName.find("volatile");
+		baseTypeName = baseTypeName.substr(p + 9);
+	}
+
+	if (clang_isRestrictQualifiedType(type)) // remove "restrict " from name
+	{
+		const auto p = baseTypeName.find("restrict");
+		baseTypeName = baseTypeName.substr(p + 9);
+	}
+
+	return baseTypeName;
+}
+
+CXType CH2Parser::GetBaseType(CXType type, long long& pointers)
 {
 	CXType baseType = type;
 
@@ -151,46 +189,9 @@ bool CH2Parser::SetupLink(CXType type, LinkType& ref)
 	while (IsTypePointer(baseType))
 	{
 		baseType = clang_getPointeeType(baseType);
-		ref.pointers++;
+		pointers++;
 	}
-
-	if (baseType.kind == CXType_Void && IsTypePointer(type))
-	{
-		ref.ref_type = FindType("*"); // primitive pointer type
-		return ref.ref_type != nullptr;
-	}
-
-	ClangStr baseTypeStr(clang_getTypeSpelling(baseType));
-	std::string baseTypeName = baseTypeStr.Get();
-
-	if (baseType.kind == CXType_Record)
-	{
-		if (baseTypeName.find("union ") != std::string::npos)
-			baseTypeName = baseTypeName.substr(6);
-		if (baseTypeName.find("struct ") != std::string::npos)
-			baseTypeName = baseTypeName.substr(7);
-	}
-
-	if (clang_isConstQualifiedType(baseType)) // remove "const " from name
-	{
-		const auto p = baseTypeName.find("const");
-		baseTypeName = baseTypeName.substr(p + 6);
-	}
-
-	if (clang_isVolatileQualifiedType(baseType)) // remove "volatile " from name
-	{
-		const auto p = baseTypeName.find("volatile");
-		baseTypeName = baseTypeName.substr(p + 9);
-	}
-
-	if (clang_isRestrictQualifiedType(baseType)) // remove "restrict " from name
-	{
-		const auto p = baseTypeName.find("restrict");
-		baseTypeName = baseTypeName.substr(p + 9);
-	}
-
-	ref.ref_type = FindType(baseTypeName);
-	return ref.ref_type != nullptr;
+	return baseType;
 }
 
 BasicMember* CH2Parser::FindType(CXType type)
@@ -233,7 +234,19 @@ bool CH2Parser::SetupVariable(Variable& v, CXType type, CXCursor c)
 		type = clang_Type_getNamedType(type);
 	}
 
-	if (!SetupLink(type, v.m_ref))
+	const auto& baseType = GetBaseType(type, v.m_ref.pointers);
+
+	if (baseType.kind == CXType_Void && v.m_ref.pointers > 0)
+	{
+		v.m_ref.ref_type = FindType("*"); // primitive pointer type
+		return v.m_ref.ref_type != nullptr;
+	}
+
+	const auto& baseName = GetNormalizedName(baseType);
+
+	v.m_ref.ref_type = FindType(baseName);
+
+	if (v.m_ref.ref_type == nullptr)
 	{
 		return false;
 	}
@@ -318,7 +331,8 @@ CXChildVisitResult CH2Parser::ParseChild(CXCursor cursor, CXCursor parent)
 		member = VisitVarDecl(cursor);
 		break;
 
-
+	case CXCursor_FirstExpr:
+	case CXCursor_BinaryOperator:
 	case CXCursor_IntegerLiteral: // skip, we don't read literals
 	case CXCursor_FloatingLiteral: // skip, we don't read literals
 	case CXCursor_StringLiteral:
@@ -332,6 +346,7 @@ CXChildVisitResult CH2Parser::ParseChild(CXCursor cursor, CXCursor parent)
 	case CXCursor_ParmDecl: // we have parsed them already
 	case CXCursor_MacroExpansion: // skip macro expansions, we do not support %ifdef %else %endif and neither h2inc did
 	case CXCursor_TypeRef:
+	case CXCursor_ParenExpr:
 		skip = true;
 		break;
 

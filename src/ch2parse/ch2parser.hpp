@@ -125,11 +125,25 @@ private:
 	bool SetupVariable(Variable& v, CXType type, CXCursor c = { CXCursor_FirstInvalid, 0, nullptr } );
 
 	/**
-	* Sets up a Link reference class
+	* Gets the base type of a type
 	* @param type Type to setup
-	* @param ref Output link type
+	* @return Basic type
 	*/
-	bool SetupLink(CXType type, LinkType& ref);
+	CXType GetBaseType(CXType type, long long& pointers);
+
+	/**
+	* Gets the name without any qualifier
+	* @param type Type name
+	* @return Normalized name
+	*/
+	std::string GetNormalizedName(CXType type);
+
+	/**
+	* Removes the C Prefix (union/struct) from a typename
+	* This makes the types C++ like, simulating what h2inc should do
+	* @param typeName type to apply the removed the C prefix
+	*/
+	void RemoveCPrefix(std::string& typeName);
 
 	/**
 	* Finds a referenced member in the parsed types

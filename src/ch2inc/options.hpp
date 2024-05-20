@@ -19,7 +19,7 @@ struct Options
 	/**
 	* Default constructor
 	*/
-	explicit Options() : info(), nologo(false), msvc(false), verbose(false) {}
+	explicit Options() : info(), nologo(false), msvc(false), verbose(false), macro_like_h2inc(false) {}
 
 	/** Platform info */
 	PlatformInfo info;

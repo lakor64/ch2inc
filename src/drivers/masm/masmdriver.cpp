@@ -201,8 +201,6 @@ void MasmDriver::PreprocessType(const LinkType& link)
 			else
 				fullname += link.ref_type->GetName();
 		}
-		else
-			fullname = fullname.erase(fullname.size() - 2);
 
 		writefmt(m_cfg.fp, "@t_{}\t\tTYPEDEF\t\t{}\n", m_total_preprocess_typedef, fullname);
 		m_total_preprocess_typedef++;

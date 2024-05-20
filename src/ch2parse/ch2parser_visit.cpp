@@ -25,12 +25,10 @@ BasicMember* CH2Parser::VisitStructOrUnion(CXCursor c, bool isUnion)
 	const auto type = clang_getCursorType(c);
 	ClangStr name(clang_getTypeSpelling(type));
 
-	// we have to remove struct/union type like C++ or h2inc references would cry
+	rt->m_name = name.Get();
 
-	if (isUnion)
-		rt->m_name = name.Get() + 6;
-	else
-		rt->m_name = name.Get() + 7;
+	// we have to remove struct/union type like C++ or h2inc references would cry
+	RemoveCPrefix(rt->m_name);
 
 	rt->m_size = clang_Type_getSizeOf(type) * 8;
 	rt->m_align = clang_Type_getAlignOf(type) * 8;
@@ -56,10 +54,7 @@ BasicMember* CH2Parser::VisitField(CXCursor c, CXCursor p)
 	std::string parent_name = name.Get();
 
 	// we remove union/parent name
-	if (parent_name.find("union ") != std::string::npos)
-		parent_name = parent_name.substr(6);
-	if (parent_name.find("struct ") != std::string::npos)
-		parent_name = parent_name.substr(7);
+	RemoveCPrefix(parent_name);
 		
 	auto parent = FindType(parent_name);
 
@@ -81,9 +76,19 @@ BasicMember* CH2Parser::VisitField(CXCursor c, CXCursor p)
 
 	if (!SetupVariable(*rt, type, c))
 	{
-		m_lasterr = CH2ErrorCodes::MissingType;
-		delete rt;
-		return nullptr;
+		long long tmp;
+		auto baseType = GetBaseType(type, tmp);
+		const auto& baseTypeName = GetNormalizedName(baseType);
+
+		// do we have a case of auto reference?
+		if (baseTypeName != parent->m_name)
+		{
+			m_lasterr = CH2ErrorCodes::MissingType;
+			delete rt;
+			return nullptr;
+		}
+		else
+			rt->m_ref.ref_type = parent;
 	}
 
 	// fields are sequential, cannot use a map
