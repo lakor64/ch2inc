@@ -205,6 +205,22 @@ bool CH2Parser::SetupVariable(Variable& v, CXType type, CXCursor c)
 		v.m_name = argumentName.Get();
 	}
 
+	while (true)
+	{
+		int q = clang_getArraySize(type);
+		if (q == -1)
+			break;
+
+		type = clang_getArrayElementType(type);
+		v.m_array.emplace_back(q);
+	}
+
+	if (type.kind == CXType_IncompleteArray)
+	{
+		type = clang_getArrayElementType(type);
+		v.m_array.emplace_back(-1); // this is for incomplete array
+	}
+
 	if (!SetupLink(type, v.m_ref))
 	{
 		return false;

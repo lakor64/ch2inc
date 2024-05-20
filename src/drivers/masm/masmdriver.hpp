@@ -148,11 +148,11 @@ private:
 	void WriteStructMembers(const Struct& stru);
 
 	/**
-	* Writes a single type
+	* Writes a variable
 	* @param link Type link
 	* @param field_name Type name
 	*/
-	void WriteType(const LinkType& link, const std::string_view& field_name);
+	void WriteVariable(const Variable& v);
 
 	/** total preprocessed custom typedefs */
 	int64_t m_total_preprocess_typedef;

@@ -8,6 +8,7 @@
 
 #include "basicmember.hpp"
 #include "linktype.hpp"
+#include <vector>
 
 /**
 * A variable, either in a function as argument or global variable
@@ -47,6 +48,16 @@ public:
 	*/
 	const auto& GetRef() const { return m_ref; }
 
+	/**
+	* Gets all the array sizes
+	* @return All the recorded array sizes
+	* @note if you have an array which size > 0 and their value is -1,
+	*  it means it's an incomplete array (like b[]), otherwise threat it
+	*  as a normal array.
+	* A value that's not an array would have m_array.size() be 0
+	*/
+	constexpr const auto& GetArraySizes() const { return m_array; }
+
 private:
 	/** If the variable is volatile */
 	bool m_volatile;
@@ -56,4 +67,6 @@ private:
 	int64_t m_size;
 	/** link to the type it references */
 	LinkType m_ref;
+	/** array sizes */
+	std::vector<int> m_array;
 };

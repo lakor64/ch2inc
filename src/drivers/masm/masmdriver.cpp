@@ -9,8 +9,11 @@
 #include <writerhelp.hpp>
 #include <stack>
 
+// TODO: Refactor this crappy code to properly use Variable
+
 void MasmDriver::CopyName(std::string& dst, const LinkType& link)
 {
+
 	for (long long i = 0; i < link.pointers; i++)
 	{
 		dst += "PTR ";
@@ -56,28 +59,49 @@ void MasmDriver::CopyName(std::string& dst, const LinkType& link)
 	}
 }
 
-void MasmDriver::WriteType(const LinkType& ref, const std::string_view& field_name)
+// TODO: this should be WriteVariable
+void MasmDriver::WriteVariable(const Variable& v)
 {
 	std::string typeName = "";
 	bool usetags = false;
 
-	if (ref.pointers)
+	if (v.GetRef().pointers)
 	{
 		typeName = "@t_" + std::to_string(m_total_used_typedef);
 		m_total_used_typedef++;
 	}
 	else
 	{
-		CopyName(typeName, ref);
+		CopyName(typeName, v.GetRef());
 
-		if (ref.ref_type->GetTypeID() == MemberType::Struct || ref.ref_type->GetTypeID() == MemberType::Union)
+		if (v.GetRef().ref_type->GetTypeID() == MemberType::Struct || v.GetRef().ref_type->GetTypeID() == MemberType::Union)
 		{
 			usetags = true;
 		}
 	}
 
-	writefmt(m_cfg.fp, "{}\t\t{}\t\t{}\n", field_name, typeName, usetags ? "<>" : "?");
+	writefmt(m_cfg.fp, "{}\t\t{}\t\t", v.GetName(), typeName);
 
+	const auto& az = v.GetArraySizes();
+
+	if (az.size() > 0 && !usetags) // apperently for MASM only basic types are supported
+	{
+		for (const auto& dups : az)
+		{
+			writefmt(m_cfg.fp, " {}t DUP (", dups);
+		}
+
+		writefmt(m_cfg.fp, "?");
+
+		for (const auto& dups : az)
+		{
+			writefmt(m_cfg.fp, ")");
+		}
+	}
+	else
+	{
+		writefmt(m_cfg.fp, " {}\n", usetags ? "<>" : "?");
+	}
 }
 
 void MasmDriver::WriteStructMembers(const Struct& stru)
@@ -91,7 +115,7 @@ void MasmDriver::WriteStructMembers(const Struct& stru)
 
 		if (field->GetSize() == -1) // bitsize > 0 works differently
 		{
-			WriteType(field->GetRef(), field->GetName());
+			WriteVariable(*field);
 		}
 		else
 		{
@@ -181,7 +205,12 @@ void MasmDriver::PreprocessType(const LinkType& link)
 		}
 
 		if (link.ref_type->GetName() != "*")
-			fullname += link.ref_type->GetName();
+		{
+			if (link.ref_type->GetTypeID() == MemberType::Primitive)
+				fullname += get_primitive_name(*dynamic_cast<Primitive*>(link.ref_type));
+			else
+				fullname += link.ref_type->GetName();
+		}
 		else
 			fullname = fullname.erase(fullname.size() - 2);
 
@@ -382,7 +411,7 @@ void MasmDriver::WriteGlobalVar(const GlobalVar& def)
 		}
 
 		PreprocessType(def.GetRef());
-		WriteType(def.GetRef(), def.GetName());
+		WriteVariable(def);
 		writefmt(m_cfg.fp, "\n");
 	}
 	else

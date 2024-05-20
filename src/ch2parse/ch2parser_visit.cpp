@@ -102,10 +102,16 @@ BasicMember* CH2Parser::VisitTypedef(CXCursor c)
 		// libclang is trying to find a function proto for something that prolly doesn't exist
 		return VisitFunc(c, undertype, true);
 	}
+	
+	// that part is done to resolve function proto, we need to reset
+	//  the code flow to the previous thing
+	// TODO: is there a better way than with this hack?
+
+	undertype = clang_getTypedefDeclUnderlyingType(c);
 
 	auto rt = new Typedef();
 
-	if (!SetupVariable(*rt, type, c))
+	if (!SetupVariable(*rt, undertype, c))
 	{
 		m_lasterr = CH2ErrorCodes::MissingType;
 		delete rt;
