@@ -8,8 +8,10 @@
 #include "utility.hpp"
 #include "clangutils.hpp"
 #include "struct.hpp"
+#include "typedef.hpp"
 
 #include <algorithm>
+#include <deque>
 #include <clang-c/Index.h>
 
 void CH2Parser::AddPrimitive(const std::string& name, PrimitiveType type, PrimitiveMods mod)
@@ -149,8 +151,6 @@ void CH2Parser::RemoveCPrefix(std::string& typeName)
 		typeName = typeName.substr(6);
 	if (typeName.find("struct ") != std::string::npos)
 		typeName = typeName.substr(7);
-	if (typeName.find("enum ") != std::string::npos)
-		typeName = typeName.substr(5);
 }
 
 std::string CH2Parser::GetNormalizedName(CXType type)
@@ -197,7 +197,9 @@ CXType CH2Parser::GetBaseType(CXType type, long long& pointers)
 BasicMember* CH2Parser::FindType(CXType type)
 {
 	ClangStr name(clang_getTypeSpelling(type));
-	return FindType(name);
+	std::string name2 = name.Get();
+	RemoveCPrefix(name2);
+	return FindType(name2);
 }
 
 BasicMember* CH2Parser::FindType(CXCursor c)
@@ -242,9 +244,24 @@ bool CH2Parser::SetupVariable(Variable& v, CXType type, CXCursor c)
 		return v.m_ref.ref_type != nullptr;
 	}
 
-	const auto& baseName = GetNormalizedName(baseType);
-
-	v.m_ref.ref_type = FindType(baseName);
+	if (baseType.kind == CXType_FunctionProto)
+	{
+		v.m_ref.ref_type = VisitFunc(c, baseType, true);
+		ClangStr argumentName(clang_getTypeSpelling(baseType));
+		std::string new_name = v.GetName() + "::" + argumentName.Get();
+		v.m_ref.ref_type->m_name = new_name;
+		m_types.insert_or_assign(new_name, v.m_ref.ref_type);
+	}
+	else if (baseType.kind == CXType_Enum)
+	{
+		const auto& baseName = Utility::GetPrimitiveNameFromSize(clang_Type_getSizeOf(baseType) * 8);
+		v.m_ref.ref_type = FindType(baseName);
+	}
+	else
+	{
+		const auto& baseName = GetNormalizedName(baseType);
+		v.m_ref.ref_type = FindType(baseName);
+	}
 
 	if (v.m_ref.ref_type == nullptr)
 	{
@@ -390,21 +407,11 @@ CXChildVisitResult CH2Parser::ParseChild(CXCursor cursor, CXCursor parent)
 	return CXChildVisit_Recurse;
 }
 
-void CH2Parser::FixupDecls()
+static std::vector<BasicMember*> do_sorting(std::unordered_map<std::string, size_t>& order_map, std::vector<BasicMember*>& types)
 {
-	// 1. order items by id
-	std::unordered_map<std::string, size_t> order_map;
-	auto& types = m_cf->m_types;
-
-	for (size_t i = 0; i < types.size(); i++)
-	{
-		order_map.insert_or_assign(types[i]->GetName(), i);
-	}
-
-	auto& it = types.begin();
-
 	std::vector<BasicMember*> push_members;
 
+	auto it = types.begin();
 	for (; it != types.end(); )
 	{
 		bool erased = false;
@@ -414,19 +421,67 @@ void CH2Parser::FixupDecls()
 			const auto& s = dynamic_cast<Struct*>((*it));
 			for (const auto& e : s->GetFields())
 			{
-				if (e->GetRef().ref_type->GetTypeID() == MemberType::Struct || e->GetRef().ref_type->GetTypeID() == MemberType::Union)
+				const auto& ref = e->GetRef().ref_type;
+				if (ref->GetTypeID() == MemberType::Struct
+					|| ref->GetTypeID() == MemberType::Union)
 				{
-					const auto& s2 = dynamic_cast<Struct*>(e->GetRef().ref_type);
-					
-					if (order_map[s2->GetName()] > order_map[s->GetName()])
+					const auto& s2 = dynamic_cast<Struct*>(ref);
+					auto it2 = order_map.find(s2->GetName());
+
+					if (it2 == order_map.end() || it2->second > order_map[s->GetName()])
 					{
 						// erase the type as we have to push at the end
 						it = types.erase(it);
 						push_members.emplace_back(s);
 						erased = true;
+
+						if (it2 != order_map.end())
+							order_map.erase(s->GetName());
+
 						break;
 					}
 				}
+				else if (ref->GetTypeID() == MemberType::Typedef)
+				{
+					const auto& s2 = dynamic_cast<Typedef*>(ref);
+					auto it2 = order_map.find(s2->GetName());
+
+					if (it2 == order_map.end() || it2->second > order_map[s->GetName()])
+					{
+						// erase the type as we have to push at the end
+						it = types.erase(it);
+						push_members.emplace_back(s);
+
+						if (it2 != order_map.end())
+							order_map.erase(s->GetName());
+
+						erased = true;
+						break;
+					}
+				}
+			}
+		}
+		else if ((*it)->GetTypeID() == MemberType::Typedef)
+		{
+			const auto& s = dynamic_cast<Typedef*>((*it));
+
+			if (s->GetRef().ref_type->GetTypeID() == MemberType::Primitive)
+			{
+				it++;
+				continue;
+			}
+
+			auto it2 = order_map.find(s->GetRef().ref_type->GetName());
+			if (it2 == order_map.end() || it2->second > order_map[s->GetName()])
+			{
+				// erase the type as we have to push at the end
+				it = types.erase(it);
+				push_members.emplace_back(s);
+
+				if (it2 != order_map.end())
+					order_map.erase(s->GetName());
+
+				erased = true;
 			}
 		}
 
@@ -434,8 +489,37 @@ void CH2Parser::FixupDecls()
 			it++;
 	}
 
-	for (const auto& m : push_members)
+	return push_members;
+}
+
+void CH2Parser::FixupDecls()
+{
+	// 1. order items by id
+	std::unordered_map<std::string, size_t> order_map;
+	std::vector<BasicMember*> push_members;
+	auto& types = m_cf->m_types;
+
+	for (size_t i = 0; i < types.size(); i++)
 	{
-		m_cf->m_types.emplace_back(m);
+		order_map.insert_or_assign(types[i]->GetName(), i);
+	}
+
+	while (true)
+	{
+		// destroy all the missing symbols until we have resolved everything
+
+		push_members = do_sorting(order_map, types);
+
+		if (push_members.empty())
+			break;
+
+		size_t i = order_map.size();
+		for (const auto& m : push_members)
+		{
+			order_map.insert_or_assign(m->GetName(), i);
+			m_cf->m_types.emplace_back(m);
+			i++;
+		}
+
 	}
 }
