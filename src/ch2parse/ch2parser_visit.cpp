@@ -179,6 +179,21 @@ BasicMember* CH2Parser::VisitEnumDecl(CXCursor c, CXCursor p)
 	}
 
 	rt->m_parent = dynamic_cast<Enum*>(parent);
+
+	// fields are sequential, cannot use a map
+	for (const auto& f : rt->m_parent->m_fields)
+	{
+		if (f->GetName() == rt->m_name)
+		{
+			// field was already added, skip
+			// this is required due to how nested structure parse are handled (they are parsed two times)
+			// the sad thing is that we cannot know if the structure is going to be parsed again
+			delete rt;
+			return nullptr;
+		}
+	}
+
+
 	rt->m_parent->m_fields.push_back(rt);
 
 	return rt;
@@ -191,6 +206,7 @@ BasicMember* CH2Parser::VisitEnum(CXCursor c)
 	ClangStr name(clang_getTypeSpelling(type));
 
 	rt->m_name = name.Get();
+	RemoveCPrefix(rt->m_name);
 
 	const auto sizeType = clang_getEnumDeclIntegerType(c);
 	rt->m_size = clang_Type_getSizeOf(sizeType);
@@ -336,6 +352,10 @@ BasicMember* CH2Parser::VisitMacroDef(CXCursor c)
 		}
 		case CXToken_Literal:
 		{
+			auto last_ch = rt->m_value[rt->m_value.size() - 1];
+			if (last_ch == '-' || last_ch == '~')
+				eval = true;
+
 			// does the token starts with a string literal?
 			if (value_str[0] == '"')
 			{
