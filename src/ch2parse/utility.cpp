@@ -124,3 +124,24 @@ StorageType Utility::CXStorageTypeToCH2StorageType(CX_StorageClass c)
 
 	return StorageType::None;
 }
+
+std::string Utility::GetPrimitiveNameFromSize(int size)
+{
+	switch (size)
+	{
+	case 8:
+		return "char";
+	case 16:
+		return "short";
+	case 32:
+		return "int";
+	case 64:
+		return "long long";
+	case 80:
+		return "long double";
+	default:
+		break;
+	}
+
+	return "";
+}

@@ -117,6 +117,11 @@ public:
 	void WriteGlobalVar(const GlobalVar& def) override;
 
 private:
+	/**
+	* Writes a function typedef
+	* @param fnc Function type
+	*/
+	void WriteFunctionTypedef(const Function& fnc);
 
 	/**
 	* Adjust the type name of a link name
@@ -135,11 +140,11 @@ private:
 	/**
 	* MASM does not directly support type declarations of pointers, so we need to generate
 	* a new typedef and put them there.
-	* This code will preprocess the type and verify if we need to insert a TYPEDEF before the
+	* This code will preprocess the variable and verify if we need to insert a TYPEDEF before the
 	* type delcaration.
 	* @param link Link to preprocess
 	*/
-	void PreprocessType(const LinkType& link);
+	void PreprocessVariable(const Variable& link);
 
 	/**
 	* Writes the members of a structure or union

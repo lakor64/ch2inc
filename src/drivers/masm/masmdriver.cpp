@@ -13,7 +13,6 @@
 
 void MasmDriver::CopyName(std::string& dst, const LinkType& link)
 {
-
 	for (long long i = 0; i < link.pointers; i++)
 	{
 		dst += "PTR ";
@@ -36,7 +35,7 @@ void MasmDriver::CopyName(std::string& dst, const LinkType& link)
 		{
 			if (m_tag_link[k] == n)
 			{
-				dst += "@tag_ " + std::to_string(k);
+				dst += "@tag_" + std::to_string(k);
 				return;
 			}
 		}
@@ -183,8 +182,17 @@ void MasmDriver::WriteStructMembers(const Struct& stru)
 	}
 }
 
-void MasmDriver::PreprocessType(const LinkType& link)
+void MasmDriver::PreprocessVariable(const Variable& v)
 {
+	const auto& link = v.GetRef();
+
+	const auto& fnclink = dynamic_cast<Function*>(link.ref_type);
+
+	if (fnclink) // typeid == Function
+	{
+		WriteFunctionTypedef(*fnclink);
+	}
+
 	if (link.pointers)
 	{
 		std::string fullname = "";
@@ -198,6 +206,11 @@ void MasmDriver::PreprocessType(const LinkType& link)
 		{
 			if (link.ref_type->GetTypeID() == MemberType::Primitive)
 				fullname += get_primitive_name(*dynamic_cast<Primitive*>(link.ref_type));
+			else if (fnclink)
+			{
+				fullname += "@proto_" + std::to_string(m_total_protos);
+				m_total_protos++;
+			}
 			else
 				fullname += link.ref_type->GetName();
 		}
@@ -211,7 +224,7 @@ void MasmDriver::PreprocessStruct(const Struct& stru)
 {
 	for (const auto& field : stru.GetFields())
 	{
-		PreprocessType(field->GetRef());
+		PreprocessVariable(*field);
 	}
 }
 
@@ -272,8 +285,15 @@ void MasmDriver::WriteStruct(const Struct& stru)
 
 void MasmDriver::WriteUnion(const Union& fnc)
 {
-	const std::string_view name = fnc.GetName();
 	PreprocessStruct(dynamic_cast<const Struct&>(fnc));
+	std::string name = fnc.GetName();
+
+	if (fnc.IsUnnamed())
+	{
+		m_tag_link.emplace_back(name);
+		name = "@tag_" + std::to_string(m_tag_link.size() - 1);
+	}
+
 	writefmt(m_cfg.fp, "{}\t\tUNION\n", name);
 	WriteStructMembers(dynamic_cast<const Struct&>(fnc));
 	writefmt(m_cfg.fp, "{}\t\tENDS\n\n", name);
@@ -287,7 +307,7 @@ void MasmDriver::WriteEnum(const Enum& fnc)
 	}
 }
 
-void MasmDriver::WriteFunction(const Function& fnc)
+void MasmDriver::WriteFunctionTypedef(const Function& fnc)
 {
 	std::string_view callType;
 	int isfirst = 1;
@@ -302,7 +322,7 @@ void MasmDriver::WriteFunction(const Function& fnc)
 
 			if (m_cfg.verbose)
 				writefmt(m_cfg.fp, "; function {} ignored as it uses an unsupported call type ({})\n\n", fnc.GetName(), callType);
-	
+
 			return;
 		}
 		else
@@ -329,6 +349,13 @@ void MasmDriver::WriteFunction(const Function& fnc)
 	if (fnc.IsVariadic())
 		writefmt(m_cfg.fp, ", :VARARG");
 
+	writefmt(m_cfg.fp, "\n");
+}
+
+void MasmDriver::WriteFunction(const Function& fnc)
+{
+	WriteFunctionTypedef(fnc);
+
 	std::string protoType = "PROTO";
 
 	if (fnc.IsTypedef())
@@ -339,7 +366,7 @@ void MasmDriver::WriteFunction(const Function& fnc)
 			protoType += " PTR";
 	}
 
-	writefmt(m_cfg.fp, "\n{}\t\t{}\t\t@proto_{}\n\n", fnc.GetName(), protoType, m_total_protos);
+	writefmt(m_cfg.fp, "{}\t\t{}\t\t@proto_{}\n\n", fnc.GetName(), protoType, m_total_protos);
 	m_total_protos++;
 }
 
@@ -396,7 +423,7 @@ void MasmDriver::WriteGlobalVar(const GlobalVar& def)
 			m_data_written = true;
 		}
 
-		PreprocessType(def.GetRef());
+		PreprocessVariable(def);
 		WriteVariable(def);
 		writefmt(m_cfg.fp, "\n");
 	}

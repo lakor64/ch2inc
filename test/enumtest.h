@@ -9,3 +9,8 @@ A_6,
 A_7,
 A_8,
 };
+
+typedef enum b
+{
+	B_1,
+} b;

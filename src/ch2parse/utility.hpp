@@ -45,4 +45,11 @@ namespace Utility
 	* @return library storage type
 	*/
 	StorageType CXStorageTypeToCH2StorageType(CX_StorageClass c);
+
+	/**
+	* Gets the name of the primitive from the size
+	* @param size Primitive size
+	* @return Primitive name
+	*/
+	std::string GetPrimitiveNameFromSize(int size);
 }
