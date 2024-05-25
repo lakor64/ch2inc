@@ -324,6 +324,12 @@ BasicMember* CH2Parser::VisitMacroDef(CXCursor c)
 				if (value_str == "+" || value_str == "-" || value_str == "*" || value_str == "/")
 					eval = true;
 			}
+			else if (rt->m_defType == DefineType::Text && value_str == "(") // not supported, sorry
+			{
+				clang_disposeTokens(m_unit, tokens, numTokens);
+				delete rt;
+				return nullptr;
+			}
 
 			rt->m_value += value_str;
 			break;
